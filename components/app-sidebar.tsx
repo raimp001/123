@@ -11,16 +11,16 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-} from "@/components/ui/sidebar" // Assuming sidebar components are in ui
-import { Home, Briefcase, BarChart2, Settings, UserCircle, LifeBuoy } from "lucide-react"
+} from "@/components/ui/sidebar"
+import { Home, BarChart2, Settings, UserCircle, LifeBuoy, Coins } from "lucide-react" // Changed Briefcase to Coins
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useSidebar } from "@/components/ui/sidebar" // Assuming useSidebar is exported
+import { useSidebar } from "@/components/ui/sidebar"
 
 // Menu items.
 const mainMenuItems = [
   { title: "Overview", url: "/dashboard", icon: Home },
-  { title: "Stocks", url: "/dashboard/stocks", icon: Briefcase },
+  { title: "Assets", url: "/dashboard/assets", icon: Coins }, // Changed from Stocks to Assets
   { title: "Analytics", url: "/dashboard/analytics", icon: BarChart2 },
 ]
 
@@ -32,14 +32,14 @@ const accountMenuItems = [
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { state: sidebarState } = useSidebar() // Get sidebar state
+  const { state: sidebarState } = useSidebar()
 
   return (
     <Sidebar collapsible="icon" side="left">
       <SidebarHeader className="p-2 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-semibold px-2">
-          <Briefcase className="h-6 w-6" />
-          {sidebarState === "expanded" && <span>StockTrack</span>}
+          <Coins className="h-6 w-6" /> {/* Changed icon */}
+          {sidebarState === "expanded" && <span>AssetTrack</span>} {/* Changed name */}
         </Link>
       </SidebarHeader>
       <SidebarContent>
@@ -49,7 +49,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.title}>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.url)} tooltip={item.title}>
                     <Link href={item.url}>
                       <item.icon />
                       <span>{item.title}</span>

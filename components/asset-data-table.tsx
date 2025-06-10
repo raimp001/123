@@ -1,7 +1,6 @@
 "use client"
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-
 import * as React from "react"
 import Image from "next/image"
 import {
@@ -38,19 +37,21 @@ import {
   ThumbsUp,
   ThumbsDown,
   Meh,
+  Coins,
+  Building,
 } from "lucide-react"
-import type { Stock } from "@/types/stock"
+import type { Asset } from "@/types/asset" // Renamed type
 
 const getGainBadgeVariant = (
-  gain: Stock["shortTermGainPotential"],
+  gain: Asset["shortTermGainPotential"],
 ): "default" | "secondary" | "destructive" | "outline" => {
   switch (gain) {
     case "High":
-      return "default" // Greenish in default theme
+      return "default"
     case "Medium":
-      return "secondary" // Bluish/Yellowish
+      return "secondary"
     case "Low":
-      return "destructive" // Reddish
+      return "destructive"
     case "N/A":
       return "outline"
     default:
@@ -58,7 +59,7 @@ const getGainBadgeVariant = (
   }
 }
 
-const getSentimentIcon = (sentiment: Stock["sentiment"]) => {
+const getSentimentIcon = (sentiment: Asset["sentiment"]) => {
   switch (sentiment) {
     case "Positive":
       return <ThumbsUp className="h-4 w-4 text-green-500" />
@@ -72,7 +73,7 @@ const getSentimentIcon = (sentiment: Stock["sentiment"]) => {
 }
 
 const getRecommendationVariant = (
-  recommendation: Stock["recommendation"],
+  recommendation: Asset["recommendation"],
 ): "default" | "secondary" | "destructive" | "outline" => {
   switch (recommendation) {
     case "Strong Buy":
@@ -83,13 +84,21 @@ const getRecommendationVariant = (
     case "Sell":
       return "destructive"
     case "Speculative":
-      return "outline" // Or a unique color
+      return "outline"
     default:
       return "outline"
   }
 }
 
-export const columns: ColumnDef<Stock>[] = [
+const formatMarketCap = (value?: number) => {
+  if (value === undefined || value === null) return "N/A"
+  if (value >= 1_000_000_000_000) return `${(value / 1_000_000_000_000).toFixed(2)}T`
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`
+  return value.toLocaleString()
+}
+
+export const columns: ColumnDef<Asset>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -99,71 +108,106 @@ export const columns: ColumnDef<Stock>[] = [
       </Button>
     ),
     cell: ({ row }) => {
-      const stock = row.original
+      const asset = row.original
       return (
         <div className="flex items-center gap-2">
-          {stock.logoUrl && (
+          {asset.logoUrl && (
             <Image
-              src={stock.logoUrl || "/placeholder.svg"}
-              alt={`${stock.name} logo`}
+              src={asset.logoUrl || "/placeholder.svg"}
+              alt={`${asset.name} logo`}
               width={24}
               height={24}
               className="rounded-sm"
             />
           )}
           <div>
-            <div className="font-medium">{stock.name}</div>
-            {stock.ticker && <div className="text-xs text-muted-foreground">{stock.ticker}</div>}
+            <div className="font-medium">{asset.name}</div>
+            {asset.symbol && <div className="text-xs text-muted-foreground">{asset.symbol}</div>}
           </div>
         </div>
       )
     },
   },
   {
-    accessorKey: "type",
-    header: "Type",
-    cell: ({ row }) => (
-      <Badge variant={row.original.type === "Public" ? "outline" : "secondary"}>{row.original.type}</Badge>
-    ),
+    accessorKey: "assetClass",
+    header: "Asset Class",
+    cell: ({ row }) => {
+      const assetClass = row.original.assetClass
+      const icon = assetClass === "Stock" ? <Building className="h-4 w-4 mr-1" /> : <Coins className="h-4 w-4 mr-1" />
+      return (
+        <Badge variant={assetClass === "Stock" ? "secondary" : "outline"} className="flex items-center">
+          {icon}
+          {assetClass}
+        </Badge>
+      )
+    },
   },
   {
     accessorKey: "currentPrice",
     header: "Price/Valuation",
     cell: ({ row }) => {
-      const stock = row.original
+      const asset = row.original
       const movementIcon =
-        stock.priceMovement === "Up" ? (
+        asset.priceMovement === "Up" ? (
           <ArrowUp className="h-4 w-4 text-green-500" />
-        ) : stock.priceMovement === "Down" ? (
+        ) : asset.priceMovement === "Down" ? (
           <ArrowDown className="h-4 w-4 text-red-500" />
         ) : (
           <Minus className="h-4 w-4 text-gray-500" />
         )
+
+      let displayValue = "N/A"
+      if (asset.assetClass === "Stock") {
+        displayValue =
+          asset.type === "Public" && asset.currentPrice !== undefined
+            ? `$${asset.currentPrice.toFixed(2)}`
+            : asset.valuationEst || "N/A"
+      } else if (asset.assetClass === "Crypto" && asset.currentPrice !== undefined) {
+        displayValue = `$${asset.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: asset.currentPrice < 1 ? 8 : 2 })}`
+      }
+
       return (
         <div className="flex items-center gap-1">
-          {stock.type === "Public" ? `$${stock.currentPrice?.toFixed(2)}` : stock.valuationEst}
+          {displayValue}
           {movementIcon}
         </div>
       )
     },
   },
   {
+    accessorKey: "marketCap",
+    header: ({ column }) => (
+      <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+        Market Cap
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const asset = row.original
+      if (asset.assetClass === "Crypto") {
+        return <div className="text-right">{formatMarketCap(asset.marketCap)}</div>
+      }
+      return <span className="text-muted-foreground text-right">N/A</span>
+    },
+    sortingFn: "alphanumeric",
+  },
+  {
     accessorKey: "volume",
     header: ({ column }) => (
       <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-        Volume
+        Volume (24h)
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
     cell: ({ row }) => {
       const volume = row.original.volume
-      if (volume === undefined || volume === null) return <span className="text-muted-foreground">N/A</span>
-      return <div className="text-right">{volume.toLocaleString()}</div>
+      if (volume === undefined || volume === null) return <span className="text-muted-foreground text-right">N/A</span>
+      return <div className="text-right">{formatMarketCap(volume)}</div> // Use formatMarketCap for large volume numbers
     },
-    sortingFn: "alphanumeric", // Ensure numbers sort correctly
+    sortingFn: "alphanumeric",
   },
   {
-    id: "buySellRatio24h", // Custom ID as it's a calculated value
+    id: "buySellRatio24h",
     header: ({ column }) => (
       <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
         Buy/Sell (24h)
@@ -171,20 +215,16 @@ export const columns: ColumnDef<Stock>[] = [
       </Button>
     ),
     accessorFn: (row) => {
-      // Calculate ratio for sorting and display
       if (row.buyVolume24h !== undefined && row.sellVolume24h !== undefined) {
-        if (row.sellVolume24h > 0) {
-          return row.buyVolume24h / row.sellVolume24h
-        } else if (row.buyVolume24h > 0) {
-          return Number.POSITIVE_INFINITY // Represents a very high ratio
-        }
+        if (row.sellVolume24h > 0) return row.buyVolume24h / row.sellVolume24h
+        else if (row.buyVolume24h > 0) return Number.POSITIVE_INFINITY
       }
-      return null // Or undefined, or a specific value for N/A
+      return null
     },
     cell: ({ getValue }) => {
       const ratio = getValue<number | null>()
-      if (ratio === null || ratio === undefined) return <span className="text-muted-foreground">N/A</span>
-      if (ratio === Number.POSITIVE_INFINITY) return <span className="text-green-500 font-semibold">∞</span>
+      if (ratio === null || ratio === undefined) return <span className="text-muted-foreground text-right">N/A</span>
+      if (ratio === Number.POSITIVE_INFINITY) return <span className="text-green-500 font-semibold text-right">∞</span>
       return (
         <div
           className={`text-right font-medium ${ratio >= 1.5 ? "text-green-600" : ratio < 0.8 ? "text-red-600" : ""}`}
@@ -193,7 +233,7 @@ export const columns: ColumnDef<Stock>[] = [
         </div>
       )
     },
-    sortingFn: "alphanumeric", // Ensure numbers (and Infinity) sort correctly
+    sortingFn: "alphanumeric",
   },
   {
     accessorKey: "shortTermGainPotential",
@@ -231,27 +271,9 @@ export const columns: ColumnDef<Stock>[] = [
     ),
   },
   {
-    accessorKey: "keyIndicatorsSummary",
-    header: "Indicators",
-    cell: ({ row }) => (
-      <div className="text-xs max-w-xs truncate" title={row.original.keyIndicatorsSummary}>
-        {row.original.keyIndicatorsSummary}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "newsHighlight",
-    header: "News",
-    cell: ({ row }) => (
-      <div className="text-xs max-w-xs truncate" title={row.original.newsHighlight}>
-        {row.original.newsHighlight}
-      </div>
-    ),
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
-      const stock = row.original
+      const asset = row.original
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -262,12 +284,12 @@ export const columns: ColumnDef<Stock>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => alert(`Viewing details for ${stock.name}`)}>View Details</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => alert(`Adding ${stock.name} to watchlist`)}>
+            <DropdownMenuItem onClick={() => alert(`Viewing details for ${asset.name}`)}>View Details</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => alert(`Adding ${asset.name} to watchlist`)}>
               Add to Watchlist
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => alert(`Trading ${stock.name}`)}>Trade</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => alert(`Trading ${asset.name}`)}>Trade</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
@@ -275,13 +297,16 @@ export const columns: ColumnDef<Stock>[] = [
   },
 ]
 
-interface StockDataTableProps {
-  data: Stock[]
+interface AssetDataTableProps {
+  data: Asset[]
 }
 
-export function StockDataTable({ data }: StockDataTableProps) {
+export function AssetDataTable({ data }: AssetDataTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    keyIndicatorsSummary: false, // Hide by default
+    newsHighlight: false, // Hide by default
+  })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
 
   const table = useReactTable({
@@ -298,6 +323,9 @@ export function StockDataTable({ data }: StockDataTableProps) {
       sorting,
       columnVisibility,
       columnFilters,
+    },
+    initialState: {
+      pagination: { pageSize: 10 },
     },
   })
 
@@ -319,6 +347,8 @@ export function StockDataTable({ data }: StockDataTableProps) {
                 if (column.id === "keyIndicatorsSummary") columnName = "Indicators"
                 if (column.id === "newsHighlight") columnName = "News"
                 if (column.id === "buySellRatio24h") columnName = "Buy/Sell (24h)"
+                if (column.id === "assetClass") columnName = "Asset Class"
+                if (column.id === "marketCap") columnName = "Market Cap"
                 return (
                   <DropdownMenuCheckboxItem
                     key={column.id}
