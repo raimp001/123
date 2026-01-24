@@ -70,11 +70,19 @@ const config: Config = {
   			'2xl': '1rem'
   		},
   		fontFamily: {
-  			sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+  			sans: [
+  				'-apple-system',
+  				'BlinkMacSystemFont',
+  				'Segoe UI',
+  				'Roboto',
+  				'Helvetica Neue',
+  				'Arial',
+  				'sans-serif'
+  			]
   		},
   		boxShadow: {
-  			'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
-  			'soft-lg': '0 4px 16px rgba(0, 0, 0, 0.06)',
+  			soft: '0 2px 8px rgba(0, 0, 0, 0.04)',
+  			'soft-lg': '0 4px 16px rgba(0, 0, 0, 0.06)'
   		},
   		keyframes: {
   			'accordion-down': {
