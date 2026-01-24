@@ -103,7 +103,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "YOUR_GOOGLE_VERIFICATION_CODE", // Replace after adding to Search Console
+    google: "7SroD-s4YZJUNIGueUIlLaiwHuX0ENQp8Ntebij8aC8",
   },
   alternates: {
     canonical: "https://sciflowlabs.com",
