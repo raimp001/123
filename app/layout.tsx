@@ -6,6 +6,12 @@ import { Providers } from "@/components/providers"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { cookies } from "next/headers"
+import { 
+  OrganizationStructuredData, 
+  WebsiteStructuredData, 
+  SoftwareApplicationStructuredData,
+  FAQStructuredData 
+} from "@/components/structured-data"
 
 // Sans-serif for UI elements
 const inter = Inter({ 
@@ -32,15 +38,77 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "SciFlow | Decentralized Research Bounties",
-  description: "A two-sided marketplace connecting Funders with Labs for milestone-based research bounties. Hybrid payments via Stripe & Crypto escrow.",
-  keywords: ["DeSci", "research bounties", "decentralized science", "crypto escrow", "scientific research"],
-  authors: [{ name: "SciFlow" }],
-  openGraph: {
-    title: "SciFlow | Decentralized Research Bounties",
-    description: "Fund breakthrough research with milestone-based accountability",
-    type: "website",
+  metadataBase: new URL('https://sciflowlabs.com'),
+  title: {
+    default: "SciFlow | Decentralized Research Bounties",
+    template: "%s | SciFlow"
   },
+  description: "SciFlow is a decentralized science (DeSci) platform connecting funders with verified research labs through milestone-based bounties. Escrow-protected payments via Stripe, Solana USDC, and Base ensure accountability. Fund breakthrough research with trust.",
+  keywords: [
+    "DeSci",
+    "decentralized science", 
+    "research bounties",
+    "scientific research funding",
+    "crypto escrow",
+    "Solana USDC",
+    "Base blockchain",
+    "milestone-based funding",
+    "research labs",
+    "scientific research marketplace",
+    "Web3 science",
+    "blockchain research",
+    "research grants",
+    "lab funding"
+  ],
+  authors: [{ name: "SciFlow Labs", url: "https://sciflowlabs.com" }],
+  creator: "SciFlow Labs",
+  publisher: "SciFlow Labs",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://sciflowlabs.com",
+    siteName: "SciFlow",
+    title: "SciFlow | Fund Breakthrough Research with Trust",
+    description: "Decentralized science platform connecting funders with verified labs. Milestone-based bounties with escrow-protected payments via crypto and fiat.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "SciFlow - Decentralized Research Bounties",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SciFlow | Decentralized Research Bounties",
+    description: "Fund breakthrough research with milestone-based accountability. Escrow-protected payments via crypto & fiat.",
+    images: ["/og-image.png"],
+    creator: "@sciflowlabs",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: "YOUR_GOOGLE_VERIFICATION_CODE", // Replace after adding to Search Console
+  },
+  alternates: {
+    canonical: "https://sciflowlabs.com",
+  },
+  category: "technology",
 }
 
 export default async function RootLayout({
@@ -58,6 +126,10 @@ export default async function RootLayout({
       className={`${inter.variable} ${merriweather.variable} ${jetbrainsMono.variable}`}
     >
       <body className={inter.className}>
+        <OrganizationStructuredData />
+        <WebsiteStructuredData />
+        <SoftwareApplicationStructuredData />
+        <FAQStructuredData />
         <Providers>
           <SidebarProvider defaultOpen={defaultOpen}>
             <AppSidebar />

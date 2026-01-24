@@ -1,0 +1,16 @@
+# SciFlow - Decentralized Research Bounties
+# https://sciflowlabs.com
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://sciflowlabs.com/sitemap.xml
+
+# Crawl-delay (optional, be nice to servers)
+Crawl-delay: 1
+
+# Disallow admin/API routes
+Disallow: /api/
+Disallow: /_next/
+Disallow: /dashboard/*/edit
