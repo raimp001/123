@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import type { User as DbUser, Lab } from '@/types/database'
@@ -15,6 +15,7 @@ interface AuthContextType {
   isFunder: boolean
   isLab: boolean
   isAdmin: boolean
+  isConfigured: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
   signUpWithEmail: (email: string, password: string, fullName: string, role: 'funder' | 'lab') => Promise<{ error: Error | null }>
   signInWithWallet: (provider: 'solana' | 'evm', address: string, signature: string) => Promise<{ error: Error | null }>
@@ -31,7 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [lab, setLab] = useState<Lab | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const isConfigured = !!supabase
 
   const fetchUserData = useCallback(async (userId: string) => {
     try {
@@ -67,6 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id, fetchUserData])
 
   useEffect(() => {
+    // If Supabase is not configured, skip auth initialization
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
+
     // Initial session check
     const initAuth = async () => {
       try {
@@ -109,6 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, fetchUserData])
 
   const signInWithEmail = async (email: string, password: string) => {
+    if (!supabase) {
+      return { error: new Error('Authentication not configured. Please set up Supabase.') }
+    }
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       return { error: error as Error | null }
@@ -118,6 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signUpWithEmail = async (email: string, password: string, fullName: string, role: 'funder' | 'lab') => {
+    if (!supabase) {
+      return { error: new Error('Authentication not configured. Please set up Supabase.') }
+    }
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -158,6 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signInWithWallet = async (provider: 'solana' | 'evm', address: string, signature: string) => {
+    if (!supabase) {
+      return { error: new Error('Authentication not configured. Please set up Supabase.') }
+    }
     try {
       // Verify signature on the server
       const response = await fetch('/api/auth/wallet', {
@@ -185,7 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
     setDbUser(null)
     setLab(null)
   }
@@ -200,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isFunder: dbUser?.role === 'funder',
     isLab: dbUser?.role === 'lab',
     isAdmin: dbUser?.role === 'admin',
+    isConfigured,
     signInWithEmail,
     signUpWithEmail,
     signInWithWallet,
