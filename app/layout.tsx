@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Merriweather, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
+import { Providers } from "@/components/providers"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { cookies } from "next/headers"
@@ -58,7 +58,7 @@ export default async function RootLayout({
       className={`${inter.variable} ${merriweather.variable} ${jetbrainsMono.variable}`}
     >
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <Providers>
           <SidebarProvider defaultOpen={defaultOpen}>
             <AppSidebar />
             <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[sidebar-state=expanded]:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-linear">
@@ -95,7 +95,7 @@ export default async function RootLayout({
               <main className="flex-1 p-4 md:p-6 bg-secondary/30">{children}</main>
             </div>
           </SidebarProvider>
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )
