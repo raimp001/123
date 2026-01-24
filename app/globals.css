@@ -13,9 +13,9 @@
  */
 
 /* ========================================
-   GOOGLE FONTS IMPORT
+   GOOGLE FONTS
+   Note: Fonts are loaded via next/font in layout.tsx
    ======================================== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap');
 
 /* ========================================
    CSS CUSTOM PROPERTIES - LIGHT THEME
