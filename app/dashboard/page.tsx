@@ -19,6 +19,8 @@ import {
   Wallet,
   Shield
 } from "lucide-react"
+import { CreateBountyModal } from "@/components/create-bounty-modal"
+import Link from "next/link"
 
 // State metadata for visualization
 const stateConfig = {
@@ -273,10 +275,7 @@ export default function DashboardPage() {
             Manage your research bounties and track progress
           </p>
         </div>
-        <Button className="bg-navy-800 hover:bg-navy-700 text-white">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Bounty
-        </Button>
+        <CreateBountyModal />
       </div>
 
       {/* Stats Grid */}
@@ -345,12 +344,18 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                Browse Labs
-              </Button>
-              <Button className="bg-amber-500 hover:bg-amber-400 text-navy-900 font-semibold">
-                Create Bounty
-              </Button>
+              <Link href="/dashboard/labs">
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                  Browse Labs
+                </Button>
+              </Link>
+              <CreateBountyModal 
+                trigger={
+                  <Button className="bg-amber-500 hover:bg-amber-400 text-navy-900 font-semibold">
+                    Create Bounty
+                  </Button>
+                }
+              />
             </div>
           </div>
         </CardContent>
