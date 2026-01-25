@@ -109,20 +109,20 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [isOpen, setIsOpen] = useState(false)
   
   return (
-    <div className="border-b border-[#E5E7EB] last:border-0">
+    <div className="border-b border-border last:border-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full py-4 flex items-start justify-between text-left hover:bg-[#F9FAFB] transition-colors -mx-5 px-5"
+        className="w-full py-4 flex items-start justify-between text-left hover:bg-secondary/50 transition-colors -mx-5 px-5 rounded-lg"
       >
-        <span className="font-medium text-[#111827] pr-4">{question}</span>
+        <span className="font-medium text-foreground pr-4">{question}</span>
         {isOpen ? (
-          <ChevronUp className="w-5 h-5 text-[#6B7280] flex-shrink-0" />
+          <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
         ) : (
-          <ChevronDown className="w-5 h-5 text-[#6B7280] flex-shrink-0" />
+          <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
         )}
       </button>
       {isOpen && (
-        <p className="pb-4 text-sm text-[#6B7280] leading-relaxed">
+        <p className="pb-4 text-sm text-muted-foreground leading-relaxed">
           {answer}
         </p>
       )}
@@ -132,21 +132,21 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 export default function FAQPage() {
   return (
-    <div className="min-h-screen bg-[#FAFAF9]">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-2xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-12">
-          <Link href="/" className="inline-flex items-center text-sm text-[#6B7280] hover:text-[#111827] mb-6">
+          <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to Home
           </Link>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-[#6B5FED]/10 flex items-center justify-center">
-              <HelpCircle className="w-5 h-5 text-[#6B5FED]" />
+            <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+              <HelpCircle className="w-5 h-5 text-accent" />
             </div>
-            <h1 className="text-3xl font-bold text-[#111827]">FAQ</h1>
+            <h1 className="text-3xl font-serif text-foreground">FAQ</h1>
           </div>
-          <p className="text-[#6B7280]">
+          <p className="text-muted-foreground">
             Frequently asked questions about SciFlow.
           </p>
         </div>
@@ -155,13 +155,10 @@ export default function FAQPage() {
         <div className="space-y-10">
           {faqs.map((section) => (
             <section key={section.category}>
-              <h2 className="text-lg font-semibold text-[#111827] mb-4">
+              <h2 className="text-lg font-medium text-foreground mb-4">
                 {section.category}
               </h2>
-              <div 
-                className="bg-white border border-[#E5E7EB] rounded-xl divide-y divide-[#E5E7EB] px-5"
-                style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
-              >
+              <div className="bg-card border border-border rounded-xl divide-y divide-border px-5">
                 {section.questions.map((item, i) => (
                   <FAQItem key={i} question={item.q} answer={item.a} />
                 ))}
@@ -171,22 +168,19 @@ export default function FAQPage() {
         </div>
 
         {/* Footer CTA */}
-        <div 
-          className="mt-16 p-8 rounded-xl bg-white border border-[#E5E7EB] text-center"
-          style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
-        >
-          <h2 className="text-xl font-semibold text-[#111827] mb-2">Can&apos;t find your answer?</h2>
-          <p className="text-[#6B7280] mb-4">
+        <div className="mt-16 p-8 rounded-xl bg-card border border-border text-center">
+          <h2 className="text-xl font-medium text-foreground mb-2">Can&apos;t find your answer?</h2>
+          <p className="text-muted-foreground mb-4">
             Check our documentation or reach out directly.
           </p>
           <div className="flex justify-center gap-3">
             <Link href="/docs">
-              <Button variant="outline" className="border-[#E5E7EB] text-[#111827] hover:bg-[#F3F4F6] rounded-lg">
+              <Button variant="outline" className="border-border text-foreground hover:bg-secondary rounded-full">
                 Read Docs
               </Button>
             </Link>
             <Link href="/help">
-              <Button className="bg-[#6B5FED] hover:bg-[#5B4FDD] text-white rounded-lg">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
                 Contact Support
               </Button>
             </Link>

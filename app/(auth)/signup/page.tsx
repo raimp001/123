@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { FlaskConical, AlertCircle, Loader2, Building, Microscope, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, Loader2, Building, Microscope, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 
 export default function SignupPage() {
@@ -53,19 +53,19 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-sage-50 dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 p-4">
-        <Card className="w-full max-w-md border-0 shadow-clause-xl text-center">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md border-border bg-card text-center">
           <CardHeader className="pb-2">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-sage-100 dark:bg-sage-900/30 flex items-center justify-center">
-                <CheckCircle2 className="w-10 h-10 text-sage-600" />
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold text-navy-800 dark:text-white">
+            <CardTitle className="text-2xl font-serif text-foreground">
               Check Your Email
             </CardTitle>
-            <CardDescription className="text-base">
-              We&apos;ve sent a confirmation link to <strong>{email}</strong>
+            <CardDescription className="text-base text-muted-foreground">
+              We&apos;ve sent a confirmation link to <strong className="text-foreground">{email}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
@@ -75,7 +75,7 @@ export default function SignupPage() {
             <Button 
               variant="outline" 
               onClick={() => router.push('/login')}
-              className="w-full"
+              className="w-full border-border text-foreground hover:bg-secondary rounded-full"
             >
               Return to Sign In
             </Button>
@@ -86,27 +86,34 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50 dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 p-4">
-      <div className="absolute inset-0 pattern-dots opacity-30" />
-      
-      <Card className="relative w-full max-w-md border-0 shadow-clause-xl">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-navy-800 to-navy-900 flex items-center justify-center shadow-lg">
-              <FlaskConical className="w-8 h-8 text-amber-400" />
-            </div>
+            <svg viewBox="0 0 24 24" fill="none" className="w-12 h-12">
+              <path 
+                d="M9 3V11L5 19C4.5 20 5 21 6 21H18C19 21 19.5 20 19 19L15 11V3" 
+                stroke="hsl(20, 70%, 55%)"
+                strokeWidth="1.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+              <path d="M9 3H15" stroke="hsl(20, 70%, 55%)" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="11" cy="15" r="1.2" fill="hsl(20, 70%, 55%)" />
+              <circle cx="14" cy="16" r="0.9" fill="hsl(20, 70%, 65%)" />
+            </svg>
           </div>
-          <CardTitle className="text-2xl font-bold text-navy-800 dark:text-white">
+          <CardTitle className="text-2xl font-serif text-foreground">
             Create Your Account
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-muted-foreground">
             Join the decentralized science revolution
           </CardDescription>
         </CardHeader>
 
         <CardContent className="pt-4">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-center gap-2 text-destructive text-sm">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
@@ -114,15 +121,15 @@ export default function SignupPage() {
 
           {/* Progress indicator */}
           <div className="flex items-center justify-center gap-2 mb-6">
-            <div className={`w-3 h-3 rounded-full ${step >= 1 ? 'bg-amber-500' : 'bg-slate-200'}`} />
-            <div className={`w-12 h-0.5 ${step >= 2 ? 'bg-amber-500' : 'bg-slate-200'}`} />
-            <div className={`w-3 h-3 rounded-full ${step >= 2 ? 'bg-amber-500' : 'bg-slate-200'}`} />
+            <div className={`w-3 h-3 rounded-full ${step >= 1 ? 'bg-accent' : 'bg-secondary'}`} />
+            <div className={`w-12 h-0.5 ${step >= 2 ? 'bg-accent' : 'bg-secondary'}`} />
+            <div className={`w-3 h-3 rounded-full ${step >= 2 ? 'bg-accent' : 'bg-secondary'}`} />
           </div>
 
           {step === 1 ? (
             <div className="space-y-6">
               <div>
-                <Label className="text-base font-medium mb-4 block">I want to...</Label>
+                <Label className="text-base font-medium mb-4 block text-foreground">I want to...</Label>
                 <RadioGroup 
                   value={role} 
                   onValueChange={(v) => setRole(v as 'funder' | 'lab')}
@@ -132,18 +139,18 @@ export default function SignupPage() {
                     htmlFor="funder"
                     className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                       role === 'funder' 
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20' 
-                        : 'border-slate-200 hover:border-slate-300'
+                        ? 'border-accent bg-accent/10' 
+                        : 'border-border hover:border-accent/50'
                     }`}
                   >
                     <RadioGroupItem value="funder" id="funder" className="sr-only" />
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      role === 'funder' ? 'bg-amber-500 text-white' : 'bg-slate-100'
+                      role === 'funder' ? 'bg-accent text-white' : 'bg-secondary text-muted-foreground'
                     }`}>
                       <Building className="w-6 h-6" />
                     </div>
                     <div className="text-center">
-                      <div className="font-medium">Fund Research</div>
+                      <div className="font-medium text-foreground">Fund Research</div>
                       <div className="text-xs text-muted-foreground">Post bounties & sponsor labs</div>
                     </div>
                   </Label>
@@ -152,18 +159,18 @@ export default function SignupPage() {
                     htmlFor="lab"
                     className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                       role === 'lab' 
-                        ? 'border-sage-500 bg-sage-50 dark:bg-sage-900/20' 
-                        : 'border-slate-200 hover:border-slate-300'
+                        ? 'border-emerald-500 bg-emerald-500/10' 
+                        : 'border-border hover:border-emerald-500/50'
                     }`}
                   >
                     <RadioGroupItem value="lab" id="lab" className="sr-only" />
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      role === 'lab' ? 'bg-sage-500 text-white' : 'bg-slate-100'
+                      role === 'lab' ? 'bg-emerald-500 text-white' : 'bg-secondary text-muted-foreground'
                     }`}>
                       <Microscope className="w-6 h-6" />
                     </div>
                     <div className="text-center">
-                      <div className="font-medium">Conduct Research</div>
+                      <div className="font-medium text-foreground">Conduct Research</div>
                       <div className="text-xs text-muted-foreground">Bid on bounties & earn</div>
                     </div>
                   </Label>
@@ -172,7 +179,7 @@ export default function SignupPage() {
 
               <Button 
                 onClick={() => setStep(2)}
-                className="w-full bg-navy-800 hover:bg-navy-700"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
               >
                 Continue
               </Button>
@@ -180,7 +187,7 @@ export default function SignupPage() {
           ) : (
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">
+                <Label htmlFor="fullName" className="text-foreground">
                   {role === 'funder' ? 'Full Name / Organization' : 'Lab / Researcher Name'}
                 </Label>
                 <Input
@@ -191,11 +198,12 @@ export default function SignupPage() {
                   onChange={(e) => setFullName(e.target.value)}
                   required
                   disabled={isLoading}
+                  className="bg-secondary border-border text-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-foreground">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -204,11 +212,12 @@ export default function SignupPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
+                  className="bg-secondary border-border text-foreground"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-foreground">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -217,6 +226,7 @@ export default function SignupPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
+                  className="bg-secondary border-border text-foreground"
                 />
                 <p className="text-xs text-muted-foreground">
                   Must be at least 8 characters
@@ -224,7 +234,7 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-foreground">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -233,6 +243,7 @@ export default function SignupPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   disabled={isLoading}
+                  className="bg-secondary border-border text-foreground"
                 />
               </div>
 
@@ -242,13 +253,13 @@ export default function SignupPage() {
                   variant="outline"
                   onClick={() => setStep(1)}
                   disabled={isLoading}
-                  className="flex-1"
+                  className="flex-1 border-border text-foreground hover:bg-secondary rounded-full"
                 >
                   Back
                 </Button>
                 <Button 
                   type="submit" 
-                  className="flex-1 bg-navy-800 hover:bg-navy-700"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -264,9 +275,9 @@ export default function SignupPage() {
 
               <p className="text-xs text-center text-muted-foreground">
                 By creating an account, you agree to our{' '}
-                <Link href="/terms" className="text-amber-600 hover:underline">Terms of Service</Link>
+                <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link>
                 {' '}and{' '}
-                <Link href="/privacy" className="text-amber-600 hover:underline">Privacy Policy</Link>
+                <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>
               </p>
             </form>
           )}
@@ -275,16 +286,16 @@ export default function SignupPage() {
         <CardFooter className="flex flex-col gap-4 pt-0">
           <div className="relative w-full">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-navy-800 px-2 text-muted-foreground">
+              <span className="bg-card px-2 text-muted-foreground">
                 Already have an account?
               </span>
             </div>
           </div>
           <Link href="/login" className="w-full">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full border-border text-foreground hover:bg-secondary rounded-full">
               Sign In
             </Button>
           </Link>

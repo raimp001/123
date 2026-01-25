@@ -21,34 +21,34 @@ export default function ResearchPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Active Research</h1>
-        <p className="text-sm text-slate-500">Your ongoing research projects</p>
+        <h1 className="text-2xl font-serif text-foreground">Active Research</h1>
+        <p className="text-sm text-muted-foreground">Your ongoing research projects</p>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <Card key={i} className="border-slate-200">
+            <Card key={i} className="border-border bg-card">
               <CardContent className="p-5">
-                <Skeleton className="h-5 w-3/4 mb-3" />
-                <Skeleton className="h-2 w-full rounded-full mb-2" />
-                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-5 w-3/4 mb-3 bg-secondary" />
+                <Skeleton className="h-2 w-full rounded-full mb-2 bg-secondary" />
+                <Skeleton className="h-4 w-1/3 bg-secondary" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : error ? (
-        <Card className="border-slate-200">
+        <Card className="border-border bg-card">
           <CardContent className="p-10 text-center">
-            <p className="text-slate-500">Unable to load research</p>
+            <p className="text-muted-foreground">Unable to load research</p>
           </CardContent>
         </Card>
       ) : bounties.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-border bg-card">
           <CardContent className="p-10 text-center">
-            <FlaskConical className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-            <p className="font-medium text-slate-700">No active research</p>
-            <p className="text-sm text-slate-400 mt-1">Win proposals to start research</p>
+            <FlaskConical className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+            <p className="font-medium text-foreground">No active research</p>
+            <p className="text-sm text-muted-foreground mt-1">Win proposals to start research</p>
           </CardContent>
         </Card>
       ) : (
@@ -59,24 +59,24 @@ export default function ResearchPage() {
             const progress = milestones.length > 0 ? (completed / milestones.length) * 100 : 0
             
             return (
-              <Card key={bounty.id} className="border-slate-200">
+              <Card key={bounty.id} className="border-border bg-card">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div>
-                      <h3 className="font-medium text-slate-900 dark:text-white">{bounty.title}</h3>
-                      <p className="text-sm text-slate-500">
+                      <h3 className="font-medium text-foreground">{bounty.title}</h3>
+                      <p className="text-sm text-muted-foreground">
                         {formatCurrency(bounty.total_budget || 0, bounty.currency || "USD")}
                       </p>
                     </div>
-                    <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Active</Badge>
                   </div>
                   
                   <div className="mb-2">
-                    <div className="flex justify-between text-xs text-slate-500 mb-1">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
                       <span>Milestone {completed} of {milestones.length}</span>
                       <span>{Math.round(progress)}%</span>
                     </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-emerald-500 rounded-full transition-all"
                         style={{ width: `${progress}%` }}
@@ -85,7 +85,7 @@ export default function ResearchPage() {
                   </div>
 
                   {bounty.deadline && (
-                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       {daysUntil(bounty.deadline)} days remaining
                     </p>

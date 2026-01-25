@@ -9,10 +9,10 @@ import { createClient } from "@/lib/supabase/client"
 import type { Proposal } from "@/types/database"
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
-  pending: { label: "Pending", color: "bg-amber-100 text-amber-700", icon: Clock },
-  accepted: { label: "Accepted", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
-  rejected: { label: "Not Selected", color: "bg-slate-100 text-slate-600", icon: XCircle },
-  withdrawn: { label: "Withdrawn", color: "bg-slate-100 text-slate-500", icon: XCircle },
+  pending: { label: "Pending", color: "bg-amber-500/20 text-amber-400 border border-amber-500/30", icon: Clock },
+  accepted: { label: "Accepted", color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30", icon: CheckCircle },
+  rejected: { label: "Not Selected", color: "bg-secondary text-muted-foreground", icon: XCircle },
+  withdrawn: { label: "Withdrawn", color: "bg-secondary text-muted-foreground", icon: XCircle },
 }
 
 export default function ProposalsPage() {
@@ -48,33 +48,33 @@ export default function ProposalsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">My Proposals</h1>
-        <p className="text-sm text-slate-500">Track your submitted proposals</p>
+        <h1 className="text-2xl font-serif text-foreground">My Proposals</h1>
+        <p className="text-sm text-muted-foreground">Track your submitted proposals</p>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="border-slate-200">
+            <Card key={i} className="border-border bg-card">
               <CardContent className="p-5">
-                <Skeleton className="h-5 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-5 w-3/4 mb-2 bg-secondary" />
+                <Skeleton className="h-4 w-1/2 bg-secondary" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : error ? (
-        <Card className="border-slate-200">
+        <Card className="border-border bg-card">
           <CardContent className="p-10 text-center">
-            <p className="text-slate-500">Unable to load proposals</p>
+            <p className="text-muted-foreground">Unable to load proposals</p>
           </CardContent>
         </Card>
       ) : proposals.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-border bg-card">
           <CardContent className="p-10 text-center">
-            <FileText className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-            <p className="font-medium text-slate-700">No proposals yet</p>
-            <p className="text-sm text-slate-400 mt-1">Submit proposals on open bounties</p>
+            <FileText className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+            <p className="font-medium text-foreground">No proposals yet</p>
+            <p className="text-sm text-muted-foreground mt-1">Submit proposals on open bounties</p>
           </CardContent>
         </Card>
       ) : (
@@ -83,14 +83,14 @@ export default function ProposalsPage() {
             const status = statusConfig[proposal.status] || statusConfig.pending
             const StatusIcon = status.icon
             return (
-              <Card key={proposal.id} className="border-slate-200">
+              <Card key={proposal.id} className="border-border bg-card">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="font-medium text-slate-900 dark:text-white">
+                      <h3 className="font-medium text-foreground">
                         {(proposal as { bounty?: { title: string } }).bounty?.title || "Bounty"}
                       </h3>
-                      <p className="text-sm text-slate-500 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Proposed: ${proposal.proposed_budget?.toLocaleString() || "—"}
                       </p>
                     </div>

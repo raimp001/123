@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FlaskConical, Mail, Wallet, AlertCircle, Loader2 } from 'lucide-react'
+import { Mail, Wallet, AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 
 export default function LoginPage() {
@@ -45,33 +45,27 @@ export default function LoginPage() {
       let signature: string
 
       if (provider === 'solana') {
-        // Check if Phantom is installed
         const solana = (window as unknown as { solana?: { isPhantom?: boolean; connect: () => Promise<{ publicKey: { toString: () => string } }>; signMessage: (msg: Uint8Array, encoding: string) => Promise<{ signature: Uint8Array }> } }).solana
         if (!solana?.isPhantom) {
           throw new Error('Please install Phantom wallet')
         }
 
-        // Connect wallet
         const resp = await solana.connect()
         address = resp.publicKey.toString()
 
-        // Sign message
         const message = `Sign this message to authenticate with SciFlow.\n\nTimestamp: ${Date.now()}`
         const encodedMessage = new TextEncoder().encode(message)
         const signedMessage = await solana.signMessage(encodedMessage, 'utf8')
         signature = Buffer.from(signedMessage.signature).toString('base64')
       } else {
-        // Check if MetaMask is installed
         const ethereum = (window as unknown as { ethereum?: { request: (args: { method: string; params?: unknown[] }) => Promise<string[]> } }).ethereum
         if (!ethereum) {
           throw new Error('Please install MetaMask')
         }
 
-        // Connect wallet
         const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
         address = accounts[0]
 
-        // Sign message
         const message = `Sign this message to authenticate with SciFlow.\n\nTimestamp: ${Date.now()}`
         signature = await ethereum.request({
           method: 'personal_sign',
@@ -94,39 +88,46 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50 dark:from-navy-950 dark:via-navy-900 dark:to-navy-950 p-4">
-      <div className="absolute inset-0 pattern-dots opacity-30" />
-      
-      <Card className="relative w-full max-w-md border-0 shadow-clause-xl">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-navy-800 to-navy-900 flex items-center justify-center shadow-lg">
-              <FlaskConical className="w-8 h-8 text-amber-400" />
-            </div>
+            <svg viewBox="0 0 24 24" fill="none" className="w-12 h-12">
+              <path 
+                d="M9 3V11L5 19C4.5 20 5 21 6 21H18C19 21 19.5 20 19 19L15 11V3" 
+                stroke="hsl(20, 70%, 55%)"
+                strokeWidth="1.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+              <path d="M9 3H15" stroke="hsl(20, 70%, 55%)" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="11" cy="15" r="1.2" fill="hsl(20, 70%, 55%)" />
+              <circle cx="14" cy="16" r="0.9" fill="hsl(20, 70%, 65%)" />
+            </svg>
           </div>
-          <CardTitle className="text-2xl font-bold text-navy-800 dark:text-white">
+          <CardTitle className="text-2xl font-serif text-foreground">
             Welcome Back
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-muted-foreground">
             Sign in to manage your research bounties
           </CardDescription>
         </CardHeader>
 
         <CardContent className="pt-4">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-center gap-2 text-destructive text-sm">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
           )}
 
           <Tabs defaultValue="email" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="email" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary">
+              <TabsTrigger value="email" className="flex items-center gap-2 data-[state=active]:bg-card">
                 <Mail className="w-4 h-4" />
                 Email
               </TabsTrigger>
-              <TabsTrigger value="wallet" className="flex items-center gap-2">
+              <TabsTrigger value="wallet" className="flex items-center gap-2 data-[state=active]:bg-card">
                 <Wallet className="w-4 h-4" />
                 Wallet
               </TabsTrigger>
@@ -135,7 +136,7 @@ export default function LoginPage() {
             <TabsContent value="email">
               <form onSubmit={handleEmailLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-foreground">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -144,14 +145,15 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="bg-secondary border-border text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" className="text-foreground">Password</Label>
                     <Link 
                       href="/forgot-password" 
-                      className="text-xs text-amber-600 hover:text-amber-700"
+                      className="text-xs text-accent hover:underline"
                     >
                       Forgot password?
                     </Link>
@@ -164,11 +166,12 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
+                    className="bg-secondary border-border text-foreground"
                   />
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-navy-800 hover:bg-navy-700"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -186,38 +189,38 @@ export default function LoginPage() {
             <TabsContent value="wallet" className="space-y-4">
               <Button
                 variant="outline"
-                className="w-full h-14 justify-start gap-3 border-2"
+                className="w-full h-14 justify-start gap-3 border-border bg-secondary hover:bg-secondary/80"
                 onClick={() => handleWalletConnect('solana')}
                 disabled={walletConnecting !== null}
               >
                 {walletConnecting === 'solana' ? (
                   <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                    <span className="text-xl">◎</span>
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                    <span className="text-xl text-purple-400">◎</span>
                   </div>
                 )}
                 <div className="text-left">
-                  <div className="font-medium">Phantom (Solana)</div>
+                  <div className="font-medium text-foreground">Phantom (Solana)</div>
                   <div className="text-xs text-muted-foreground">Connect with Solana wallet</div>
                 </div>
               </Button>
 
               <Button
                 variant="outline"
-                className="w-full h-14 justify-start gap-3 border-2"
+                className="w-full h-14 justify-start gap-3 border-border bg-secondary hover:bg-secondary/80"
                 onClick={() => handleWalletConnect('evm')}
                 disabled={walletConnecting !== null}
               >
                 {walletConnecting === 'evm' ? (
                   <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
-                  <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
                     <span className="text-xl">🦊</span>
                   </div>
                 )}
                 <div className="text-left">
-                  <div className="font-medium">MetaMask (Base)</div>
+                  <div className="font-medium text-foreground">MetaMask (Base)</div>
                   <div className="text-xs text-muted-foreground">Connect with EVM wallet</div>
                 </div>
               </Button>
@@ -232,16 +235,16 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col gap-4 pt-0">
           <div className="relative w-full">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-navy-800 px-2 text-muted-foreground">
+              <span className="bg-card px-2 text-muted-foreground">
                 New to SciFlow?
               </span>
             </div>
           </div>
           <Link href="/signup" className="w-full">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full border-border text-foreground hover:bg-secondary rounded-full">
               Create an Account
             </Button>
           </Link>

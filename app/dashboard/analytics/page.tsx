@@ -28,20 +28,20 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <BarChart3 className="w-6 h-6 text-slate-500" />
+        <BarChart3 className="w-6 h-6 text-muted-foreground" />
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Analytics</h1>
-          <p className="text-sm text-slate-500">Platform metrics and insights</p>
+          <h1 className="text-2xl font-serif text-foreground">Analytics</h1>
+          <p className="text-sm text-muted-foreground">Platform metrics and insights</p>
         </div>
       </div>
 
       {isLoading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="border-slate-200">
+            <Card key={i} className="border-border bg-card">
               <CardContent className="p-5">
-                <Skeleton className="h-4 w-24 mb-3" />
-                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-24 mb-3 bg-secondary" />
+                <Skeleton className="h-8 w-20 bg-secondary" />
               </CardContent>
             </Card>
           ))}
@@ -50,72 +50,72 @@ export default function AnalyticsPage() {
         <>
           {/* Main Stats */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="border-slate-200">
+            <Card className="border-border bg-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Total Bounties</p>
-                  <FlaskConical className="w-5 h-5 text-slate-400" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Bounties</p>
+                  <FlaskConical className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <p className="text-3xl font-semibold text-slate-900">{stats.totalBounties}</p>
+                <p className="text-3xl font-semibold text-foreground">{stats.totalBounties}</p>
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
+            <Card className="border-border bg-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Active</p>
-                  <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Active</p>
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
                 </div>
-                <p className="text-3xl font-semibold text-emerald-600">{stats.activeBounties}</p>
+                <p className="text-3xl font-semibold text-emerald-400">{stats.activeBounties}</p>
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
+            <Card className="border-border bg-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Completed</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Completed</p>
                   <span className="text-lg">✓</span>
                 </div>
-                <p className="text-3xl font-semibold text-slate-900">{stats.completedBounties}</p>
+                <p className="text-3xl font-semibold text-foreground">{stats.completedBounties}</p>
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
+            <Card className="border-border bg-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Total Funded</p>
-                  <DollarSign className="w-5 h-5 text-amber-500" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Funded</p>
+                  <DollarSign className="w-5 h-5 text-amber-400" />
                 </div>
-                <p className="text-3xl font-semibold text-slate-900">${stats.totalFunded.toLocaleString()}</p>
+                <p className="text-3xl font-semibold text-foreground">${stats.totalFunded.toLocaleString()}</p>
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
+            <Card className="border-border bg-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Labs</p>
-                  <Users className="w-5 h-5 text-blue-500" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Labs</p>
+                  <Users className="w-5 h-5 text-blue-400" />
                 </div>
-                <p className="text-3xl font-semibold text-slate-900">{stats.totalLabs}</p>
+                <p className="text-3xl font-semibold text-foreground">{stats.totalLabs}</p>
               </CardContent>
             </Card>
 
-            <Card className="border-slate-200">
+            <Card className="border-border bg-card">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide">Avg Reputation</p>
-                  <span className="text-amber-500">★</span>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg Reputation</p>
+                  <span className="text-amber-400">★</span>
                 </div>
-                <p className="text-3xl font-semibold text-slate-900">{stats.avgReputation.toFixed(1)}</p>
+                <p className="text-3xl font-semibold text-foreground">{stats.avgReputation.toFixed(1)}</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Empty state for charts */}
-          <Card className="border-slate-200">
+          <Card className="border-border bg-card">
             <CardContent className="p-10 text-center">
-              <BarChart3 className="w-12 h-12 mx-auto text-slate-200 mb-3" />
-              <p className="text-slate-500">Charts will appear as data accumulates</p>
+              <BarChart3 className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">Charts will appear as data accumulates</p>
             </CardContent>
           </Card>
         </>

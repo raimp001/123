@@ -19,14 +19,14 @@ import { CreateBountyModal } from "@/components/create-bounty-modal"
 import Link from "next/link"
 
 const stateColors: Record<string, string> = {
-  drafting: "bg-slate-100 text-slate-700",
-  funding_escrow: "bg-amber-100 text-amber-700",
-  bidding: "bg-blue-100 text-blue-700",
-  active_research: "bg-emerald-100 text-emerald-700",
-  milestone_review: "bg-orange-100 text-orange-700",
-  dispute_resolution: "bg-red-100 text-red-700",
-  completed: "bg-green-100 text-green-700",
-  cancelled: "bg-slate-100 text-slate-500",
+  drafting: "bg-secondary text-muted-foreground",
+  funding_escrow: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+  bidding: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+  active_research: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+  milestone_review: "bg-orange-500/20 text-orange-400 border border-orange-500/30",
+  dispute_resolution: "bg-red-500/20 text-red-400 border border-red-500/30",
+  completed: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
+  cancelled: "bg-secondary text-muted-foreground",
 }
 
 const stateLabels: Record<string, string> = {
@@ -69,8 +69,8 @@ export default function BountiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Bounties</h1>
-          <p className="text-sm text-slate-500">Manage your research bounties</p>
+          <h1 className="text-2xl font-serif text-foreground">Bounties</h1>
+          <p className="text-sm text-muted-foreground">Manage your research bounties</p>
         </div>
         <CreateBountyModal />
       </div>
@@ -80,15 +80,15 @@ export default function BountiesPage() {
         {[
           { label: "Active", value: counts.active },
           { label: "Drafts", value: counts.drafts },
-          { label: "Completed", value: counts.completed, color: "text-emerald-600" },
-          { label: "Disputes", value: counts.disputes, color: "text-red-600" },
+          { label: "Completed", value: counts.completed, color: "text-emerald-400" },
+          { label: "Disputes", value: counts.disputes, color: "text-red-400" },
         ].map((stat) => (
-          <Card key={stat.label} className="border-slate-200">
+          <Card key={stat.label} className="border-border bg-card">
             <CardContent className="p-3 text-center">
-              <p className={`text-xl font-semibold ${stat.color || "text-slate-900 dark:text-white"}`}>
+              <p className={`text-xl font-semibold ${stat.color || "text-foreground"}`}>
                 {stat.value}
               </p>
-              <p className="text-xs text-slate-500">{stat.label}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -97,19 +97,19 @@ export default function BountiesPage() {
       {/* Filters */}
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search bounties..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 border-slate-200"
+            className="pl-9 bg-secondary border-border text-foreground"
           />
         </div>
         <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-[160px] border-slate-200">
+          <SelectTrigger className="w-[160px] bg-secondary border-border text-foreground">
             <SelectValue placeholder="Filter" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-card text-foreground border-border">
             <SelectItem value="all">All States</SelectItem>
             <SelectItem value="drafting">Draft</SelectItem>
             <SelectItem value="funding_escrow">Funding</SelectItem>
@@ -126,39 +126,39 @@ export default function BountiesPage() {
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="border-slate-200">
+            <Card key={i} className="border-border bg-card">
               <CardContent className="p-4 flex items-center gap-4">
-                <Skeleton className="w-10 h-10 rounded-lg" />
+                <Skeleton className="w-10 h-10 rounded-lg bg-secondary" />
                 <div className="flex-1">
-                  <Skeleton className="h-5 w-2/3 mb-2" />
-                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-5 w-2/3 mb-2 bg-secondary" />
+                  <Skeleton className="h-4 w-1/4 bg-secondary" />
                 </div>
-                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-16 rounded-full bg-secondary" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : error ? (
-        <Card className="border-slate-200">
+        <Card className="border-border bg-card">
           <CardContent className="p-10 text-center">
-            <p className="text-slate-500">Unable to load bounties</p>
-            <p className="text-xs text-slate-400 mt-1">Please configure Supabase environment variables</p>
+            <p className="text-muted-foreground">Unable to load bounties</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Please configure Supabase environment variables</p>
           </CardContent>
         </Card>
       ) : bounties.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-border bg-card">
           <CardContent className="p-10 text-center">
-            <FlaskConical className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-            <p className="font-medium text-slate-700">
+            <FlaskConical className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+            <p className="font-medium text-foreground">
               {search ? "No bounties match your search" : "No bounties yet"}
             </p>
-            <p className="text-sm text-slate-400 mt-1 mb-4">
+            <p className="text-sm text-muted-foreground mt-1 mb-4">
               {search ? "Try different keywords" : "Create your first research bounty to get started"}
             </p>
             {!search && (
               <CreateBountyModal 
                 trigger={
-                  <Button className="bg-slate-900 hover:bg-slate-800">
+                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
                     <Plus className="w-4 h-4 mr-1" /> Create Bounty
                   </Button>
                 }
@@ -170,16 +170,16 @@ export default function BountiesPage() {
         <div className="space-y-2">
           {bounties.map((bounty) => (
             <Link key={bounty.id} href={`/dashboard/bounties/${bounty.id}`}>
-              <Card className="border-slate-200 hover:border-slate-300 transition-colors group cursor-pointer">
+              <Card className="border-border bg-card hover:border-accent/50 transition-colors group cursor-pointer">
                 <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                    <FlaskConical className="w-5 h-5 text-slate-500" />
+                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                    <FlaskConical className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-slate-900 dark:text-white truncate group-hover:text-amber-600 transition-colors">
+                    <h3 className="font-medium text-foreground truncate group-hover:text-accent transition-colors">
                       {bounty.title}
                     </h3>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-muted-foreground">
                       {formatCurrency(bounty.total_budget || 0, bounty.currency || "USD")}
                       {bounty.selected_lab && (
                         <span className="ml-2">• {bounty.selected_lab.name}</span>
@@ -189,7 +189,7 @@ export default function BountiesPage() {
                   <Badge className={stateColors[bounty.current_state] || stateColors.drafting}>
                     {stateLabels[bounty.current_state] || bounty.current_state}
                   </Badge>
-                  <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
                 </CardContent>
               </Card>
             </Link>
@@ -199,7 +199,7 @@ export default function BountiesPage() {
 
       {/* Pagination info */}
       {pagination.total > 0 && (
-        <p className="text-xs text-center text-slate-400">
+        <p className="text-xs text-center text-muted-foreground">
           Showing {bounties.length} of {pagination.total} bounties
         </p>
       )}

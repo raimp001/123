@@ -16,7 +16,6 @@ import {
   Clock, 
   DollarSign, 
   Users, 
-  FileText, 
   CheckCircle2,
   AlertTriangle,
   Send,
@@ -34,7 +33,7 @@ interface PageProps {
 export default function BountyDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
-  const { user, isFunder, isLab } = useAuth()
+  const { user } = useAuth()
   const { bounty, isLoading, error, transition } = useBounty(id)
 
   const handleTransition = async (event: string, data?: Record<string, unknown>) => {
@@ -49,13 +48,13 @@ export default function BountyDetailPage({ params }: PageProps) {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-8 w-64 bg-secondary" />
         <div className="grid md:grid-cols-3 gap-6">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
+          <Skeleton className="h-40 bg-secondary" />
+          <Skeleton className="h-40 bg-secondary" />
+          <Skeleton className="h-40 bg-secondary" />
         </div>
-        <Skeleton className="h-96" />
+        <Skeleton className="h-96 bg-secondary" />
       </div>
     )
   }
@@ -64,11 +63,11 @@ export default function BountyDetailPage({ params }: PageProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <AlertTriangle className="w-12 h-12 text-muted-foreground" />
-        <h2 className="text-xl font-semibold">Bounty Not Found</h2>
+        <h2 className="text-xl font-semibold text-foreground">Bounty Not Found</h2>
         <p className="text-muted-foreground">
           {error?.message || 'The bounty you are looking for does not exist.'}
         </p>
-        <Button onClick={() => router.push('/dashboard/bounties')}>
+        <Button onClick={() => router.push('/dashboard/bounties')} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Bounties
         </Button>
@@ -89,22 +88,22 @@ export default function BountyDetailPage({ params }: PageProps) {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="mb-2"
+            className="mb-2 text-muted-foreground hover:text-foreground"
             onClick={() => router.back()}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl md:text-3xl font-bold text-navy-800 dark:text-white">
+          <h1 className="text-2xl md:text-3xl font-serif text-foreground">
             {bounty.title}
           </h1>
           <div className="flex items-center gap-3 mt-2">
             <Badge 
               className={`${
-                stateMeta?.color === 'sage' ? 'bg-sage-100 text-sage-700 border-sage-200' :
-                stateMeta?.color === 'amber' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                stateMeta?.color === 'destructive' ? 'bg-red-100 text-red-700 border-red-200' :
-                'bg-slate-100 text-slate-700 border-slate-200'
+                stateMeta?.color === 'sage' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                stateMeta?.color === 'amber' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                stateMeta?.color === 'destructive' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                'bg-secondary text-muted-foreground'
               }`}
             >
               {stateMeta?.label || bounty.state}
@@ -118,19 +117,19 @@ export default function BountyDetailPage({ params }: PageProps) {
         {/* Action Buttons based on state */}
         <div className="flex gap-2">
           {isOwner && bounty.state === 'drafting' && (
-            <Button onClick={() => handleTransition('SUBMIT_DRAFT')}>
+            <Button onClick={() => handleTransition('SUBMIT_DRAFT')} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
               <Send className="w-4 h-4 mr-2" />
               Submit for Funding
             </Button>
           )}
           {isOwner && bounty.state === 'ready_for_funding' && (
-            <Button onClick={() => handleTransition('INITIATE_FUNDING', { paymentMethod: 'stripe' })}>
+            <Button onClick={() => handleTransition('INITIATE_FUNDING', { paymentMethod: 'stripe' })} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
               <Wallet className="w-4 h-4 mr-2" />
               Fund Bounty
             </Button>
           )}
           {isOwner && bounty.state === 'bidding' && (bounty.proposals?.length || 0) > 0 && (
-            <Button variant="outline">
+            <Button variant="outline" className="border-border text-foreground hover:bg-secondary rounded-full">
               <Users className="w-4 h-4 mr-2" />
               Review Proposals ({bounty.proposals?.length})
             </Button>
@@ -139,6 +138,7 @@ export default function BountyDetailPage({ params }: PageProps) {
             <>
               <Button 
                 variant="outline"
+                className="border-border text-foreground hover:bg-secondary rounded-full"
                 onClick={() => handleTransition('REQUEST_REVISION', { 
                   milestoneId: bounty.milestones?.find(m => m.status === 'submitted')?.id 
                 })}
@@ -147,7 +147,7 @@ export default function BountyDetailPage({ params }: PageProps) {
               </Button>
               <Button onClick={() => handleTransition('APPROVE_MILESTONE', { 
                 milestoneId: bounty.milestones?.find(m => m.status === 'submitted')?.id 
-              })}>
+              })} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Approve Milestone
               </Button>
@@ -158,15 +158,15 @@ export default function BountyDetailPage({ params }: PageProps) {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                <DollarSign className="w-5 h-5 text-amber-600" />
+              <div className="p-2 rounded-lg bg-amber-500/20">
+                <DollarSign className="w-5 h-5 text-amber-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Budget</p>
-                <p className="text-xl font-bold">
+                <p className="text-xl font-bold text-foreground">
                   {bounty.currency === 'USD' ? '$' : ''}
                   {bounty.total_budget.toLocaleString()}
                   {bounty.currency === 'USDC' ? ' USDC' : ''}
@@ -176,15 +176,15 @@ export default function BountyDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-sage-100 dark:bg-sage-900/30">
-                <Target className="w-5 h-5 text-sage-600" />
+              <div className="p-2 rounded-lg bg-emerald-500/20">
+                <Target className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Milestones</p>
-                <p className="text-xl font-bold">
+                <p className="text-xl font-bold text-foreground">
                   {completedMilestones}/{totalMilestones}
                 </p>
               </div>
@@ -192,15 +192,15 @@ export default function BountyDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-navy-100 dark:bg-navy-800">
-                <Users className="w-5 h-5 text-navy-600 dark:text-navy-300" />
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <Users className="w-5 h-5 text-blue-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Proposals</p>
-                <p className="text-xl font-bold">
+                <p className="text-xl font-bold text-foreground">
                   {bounty.proposals?.length || 0}
                 </p>
               </div>
@@ -208,15 +208,15 @@ export default function BountyDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
-                <Calendar className="w-5 h-5 text-slate-600" />
+              <div className="p-2 rounded-lg bg-secondary">
+                <Calendar className="w-5 h-5 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Deadline</p>
-                <p className="text-xl font-bold">
+                <p className="text-xl font-bold text-foreground">
                   {bounty.deadline 
                     ? new Date(bounty.deadline).toLocaleDateString()
                     : 'Open'
@@ -236,22 +236,22 @@ export default function BountyDetailPage({ params }: PageProps) {
 
       {/* Tabs for Details */}
       <Tabs defaultValue="details" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="milestones">
+        <TabsList className="bg-secondary">
+          <TabsTrigger value="details" className="data-[state=active]:bg-card">Details</TabsTrigger>
+          <TabsTrigger value="milestones" className="data-[state=active]:bg-card">
             Milestones ({totalMilestones})
           </TabsTrigger>
-          <TabsTrigger value="proposals">
+          <TabsTrigger value="proposals" className="data-[state=active]:bg-card">
             Proposals ({bounty.proposals?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="activity" className="data-[state=active]:bg-card">Activity</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card>
+            <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="text-lg">Description</CardTitle>
+                <CardTitle className="text-lg text-foreground">Description</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground whitespace-pre-wrap">
@@ -260,9 +260,9 @@ export default function BountyDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="text-lg">Methodology</CardTitle>
+                <CardTitle className="text-lg text-foreground">Methodology</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground whitespace-pre-wrap">
@@ -271,15 +271,15 @@ export default function BountyDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="text-lg">Data Requirements</CardTitle>
+                <CardTitle className="text-lg text-foreground">Data Requirements</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
                   {bounty.data_requirements?.map((req, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-sage-500 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5" />
                       <span className="text-muted-foreground">{req}</span>
                     </li>
                   )) || <p className="text-muted-foreground">No specific requirements</p>}
@@ -287,15 +287,15 @@ export default function BountyDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-border bg-card">
               <CardHeader>
-                <CardTitle className="text-lg">Quality Standards</CardTitle>
+                <CardTitle className="text-lg text-foreground">Quality Standards</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
                   {bounty.quality_standards?.map((std, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-sage-500 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5" />
                       <span className="text-muted-foreground">{std}</span>
                     </li>
                   )) || <p className="text-muted-foreground">No specific standards</p>}
@@ -308,31 +308,31 @@ export default function BountyDetailPage({ params }: PageProps) {
         <TabsContent value="milestones">
           <div className="space-y-4">
             {bounty.milestones?.sort((a, b) => a.sequence - b.sequence).map((milestone) => (
-              <Card key={milestone.id}>
+              <Card key={milestone.id} className="border-border bg-card">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                        milestone.status === 'verified' ? 'bg-sage-500 text-white' :
+                        milestone.status === 'verified' ? 'bg-emerald-500 text-white' :
                         milestone.status === 'submitted' ? 'bg-amber-500 text-white' :
-                        milestone.status === 'in_progress' ? 'bg-navy-500 text-white' :
-                        'bg-slate-200 text-slate-600'
+                        milestone.status === 'in_progress' ? 'bg-blue-500 text-white' :
+                        'bg-secondary text-muted-foreground'
                       }`}>
                         {milestone.sequence}
                       </div>
                       <div>
-                        <h3 className="font-semibold">{milestone.title}</h3>
+                        <h3 className="font-semibold text-foreground">{milestone.title}</h3>
                         <p className="text-sm text-muted-foreground mt-1">
                           {milestone.description}
                         </p>
                         <div className="flex items-center gap-4 mt-3">
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="border-border text-muted-foreground">
                             {milestone.payout_percentage}% Payout
                           </Badge>
-                          <Badge variant={
-                            milestone.status === 'verified' ? 'default' :
-                            milestone.status === 'submitted' ? 'secondary' :
-                            'outline'
+                          <Badge className={
+                            milestone.status === 'verified' ? 'bg-emerald-500/20 text-emerald-400' :
+                            milestone.status === 'submitted' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-secondary text-muted-foreground'
                           }>
                             {milestone.status.replace('_', ' ')}
                           </Badge>
@@ -346,7 +346,7 @@ export default function BountyDetailPage({ params }: PageProps) {
                       </div>
                     </div>
                     {milestone.evidence_hash && (
-                      <div className="text-xs font-mono text-muted-foreground bg-slate-100 dark:bg-slate-800 p-2 rounded">
+                      <div className="text-xs font-mono text-muted-foreground bg-secondary p-2 rounded">
                         Evidence: {milestone.evidence_hash.slice(0, 16)}...
                       </div>
                     )}
@@ -359,10 +359,10 @@ export default function BountyDetailPage({ params }: PageProps) {
 
         <TabsContent value="proposals">
           {bounty.proposals?.length === 0 ? (
-            <Card>
+            <Card className="border-border bg-card">
               <CardContent className="p-12 text-center">
                 <FlaskConical className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-semibold mb-2">No Proposals Yet</h3>
+                <h3 className="font-semibold mb-2 text-foreground">No Proposals Yet</h3>
                 <p className="text-muted-foreground">
                   {bounty.state === 'bidding' 
                     ? 'Verified labs can submit proposals for this bounty.'
@@ -373,22 +373,22 @@ export default function BountyDetailPage({ params }: PageProps) {
           ) : (
             <div className="space-y-4">
               {bounty.proposals?.map((proposal) => (
-                <Card key={proposal.id}>
+                <Card key={proposal.id} className="border-border bg-card">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold">
+                          <h3 className="font-semibold text-foreground">
                             {(proposal as { lab?: { name: string } }).lab?.name}
                           </h3>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="border-border text-muted-foreground">
                             {(proposal as { lab?: { verification_tier: string } }).lab?.verification_tier}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {proposal.methodology}
                         </p>
-                        <div className="flex items-center gap-4 mt-3 text-sm">
+                        <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <DollarSign className="w-4 h-4" />
                             Bid: ${proposal.bid_amount.toLocaleString()}
@@ -406,6 +406,7 @@ export default function BountyDetailPage({ params }: PageProps) {
                       {isOwner && bounty.state === 'bidding' && (
                         <Button 
                           size="sm"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
                           onClick={() => handleTransition('SELECT_LAB', { 
                             proposalId: proposal.id,
                             labId: proposal.lab_id 
@@ -423,10 +424,10 @@ export default function BountyDetailPage({ params }: PageProps) {
         </TabsContent>
 
         <TabsContent value="activity">
-          <Card>
+          <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle className="text-lg">State History</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg text-foreground">State History</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Complete audit trail of bounty state changes
               </CardDescription>
             </CardHeader>
@@ -434,9 +435,9 @@ export default function BountyDetailPage({ params }: PageProps) {
               <div className="space-y-4">
                 {(bounty.state_history as Array<{ from_state?: string; to_state: string; timestamp: string }> || []).reverse().map((entry, index) => (
                   <div key={index} className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-2" />
+                    <div className="w-2 h-2 rounded-full bg-accent mt-2" />
                     <div>
-                      <p className="font-medium">
+                      <p className="font-medium text-foreground">
                         {entry.from_state 
                           ? `${stateMetadata[entry.from_state as keyof typeof stateMetadata]?.label || entry.from_state} → ${stateMetadata[entry.to_state as keyof typeof stateMetadata]?.label || entry.to_state}`
                           : stateMetadata[entry.to_state as keyof typeof stateMetadata]?.label || entry.to_state
