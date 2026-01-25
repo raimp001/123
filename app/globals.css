@@ -4,18 +4,11 @@
 
 /**
  * SciFlow Global Styles
- * Design System: "Clause" Aesthetic
+ * Design System: Claude-inspired minimal aesthetic
  * 
- * Typography Strategy:
- * - Merriweather (serif) for contract text, legal documents, formal content
- * - Inter (sans-serif) for UI elements, navigation, forms
- * - JetBrains Mono for code, hashes, wallet addresses
+ * Clean, spacious, low-contrast with soft accents
+ * One primary accent color, generous whitespace
  */
-
-/* ========================================
-   GOOGLE FONTS
-   Note: Fonts are loaded via next/font in layout.tsx
-   ======================================== */
 
 /* ========================================
    SMOOTH SCROLL BEHAVIOR
@@ -26,119 +19,114 @@ html {
 
 /* Scroll margin for sections (accounts for sticky headers) */
 [id] {
-  scroll-margin-top: 140px;
+  scroll-margin-top: 100px;
 }
 
 /* ========================================
    CSS CUSTOM PROPERTIES - LIGHT THEME
+   Claude-style: warm gray-white, soft violet accent
    ======================================== */
 @layer base {
   :root {
-    /* Backgrounds */
-    --background: 0 0% 100%; /* Pure white #FFFFFF */
-    --foreground: 218 28% 15%; /* Deep Navy for text */
+    /* Backgrounds - warm gray-white */
+    --background: 220 14% 96%; /* #F5F5F7 */
+    --foreground: 220 13% 13%; /* #1F2937 near-black */
 
-    /* Cards & Surfaces */
+    /* Cards & Surfaces - pure white with subtle shadow */
     --card: 0 0% 100%;
-    --card-foreground: 218 28% 15%;
+    --card-foreground: 220 13% 13%;
 
     /* Popovers */
     --popover: 0 0% 100%;
-    --popover-foreground: 218 28% 15%;
+    --popover-foreground: 220 13% 13%;
 
-    /* Primary (Deep Navy) */
-    --primary: 218 32% 15%; /* #1A2332 */
-    --primary-foreground: 0 0% 98%;
+    /* Primary - soft violet/indigo for CTAs */
+    --primary: 245 58% 51%; /* #4C3FFF-type */
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary (Soft Gray) */
-    --secondary: 240 5% 96%; /* #F4F4F5 */
-    --secondary-foreground: 218 28% 15%;
+    /* Secondary - muted blue-gray */
+    --secondary: 220 9% 94%;
+    --secondary-foreground: 220 9% 46%; /* #6B7280 */
 
     /* Muted */
-    --muted: 240 5% 96%;
-    --muted-foreground: 218 14% 45%;
+    --muted: 220 9% 94%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent (Warm Amber) */
-    --accent: 30 52% 65%; /* #D4A574 */
-    --accent-foreground: 218 28% 15%;
+    /* Accent - soft violet (same as primary for consistency) */
+    --accent: 245 58% 51%;
+    --accent-foreground: 0 0% 100%;
 
-    /* Destructive (Muted Red) */
-    --destructive: 0 43% 45%; /* #A53F3F */
-    --destructive-foreground: 0 0% 98%;
+    /* Destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    /* Borders & Inputs */
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 218 32% 15%;
+    /* Borders & Inputs - subtle */
+    --border: 220 9% 89%;
+    --input: 220 9% 89%;
+    --ring: 245 58% 51%;
 
-    /* Border radius */
-    --radius: 0.5rem;
+    /* Border radius - slightly rounded */
+    --radius: 0.625rem;
 
-    /* Chart colors (Matching palette) */
-    --chart-1: 218 32% 15%; /* Navy */
-    --chart-2: 30 52% 65%; /* Amber */
-    --chart-3: 93 32% 50%; /* Sage */
-    --chart-4: 0 43% 45%; /* Alert */
-    --chart-5: 218 14% 65%; /* Muted */
+    /* Chart colors */
+    --chart-1: 245 58% 51%;
+    --chart-2: 158 64% 52%;
+    --chart-3: 43 96% 56%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 220 9% 46%;
 
-    /* Sidebar (Dark themed for contrast) */
-    --sidebar-background: 218 32% 12%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-border: 218 25% 20%;
-    --sidebar-accent: 218 25% 18%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-ring: 30 52% 65%;
-    --sidebar-primary: 30 52% 65%;
-    --sidebar-primary-foreground: 218 32% 12%;
-
-    /* SciFlow specific */
-    --sciflow-navy: 218 32% 15%;
-    --sciflow-amber: 30 52% 65%;
-    --sciflow-sage: 93 32% 50%;
-    --sciflow-alert: 0 43% 45%;
+    /* Sidebar (dark themed for contrast) */
+    --sidebar-background: 220 13% 13%;
+    --sidebar-foreground: 220 9% 89%;
+    --sidebar-border: 220 13% 20%;
+    --sidebar-accent: 220 13% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-ring: 245 58% 51%;
+    --sidebar-primary: 245 58% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
   }
 
   /* ========================================
      DARK THEME
      ======================================== */
   .dark {
-    --background: 218 32% 8%;
-    --foreground: 0 0% 95%;
+    --background: 220 13% 10%;
+    --foreground: 220 9% 94%;
 
-    --card: 218 30% 10%;
-    --card-foreground: 0 0% 95%;
+    --card: 220 13% 13%;
+    --card-foreground: 220 9% 94%;
 
-    --popover: 218 30% 10%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 220 13% 13%;
+    --popover-foreground: 220 9% 94%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 218 32% 12%;
+    --primary: 245 58% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 218 25% 15%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 220 13% 18%;
+    --secondary-foreground: 220 9% 70%;
 
-    --muted: 218 25% 15%;
-    --muted-foreground: 218 10% 60%;
+    --muted: 220 13% 18%;
+    --muted-foreground: 220 9% 60%;
 
-    --accent: 30 52% 55%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 245 58% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 50% 40%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 218 25% 18%;
-    --input: 218 25% 18%;
-    --ring: 30 52% 55%;
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    --ring: 245 58% 60%;
 
     /* Sidebar in dark mode */
-    --sidebar-background: 218 35% 6%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-border: 218 25% 14%;
-    --sidebar-accent: 218 25% 12%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-ring: 30 52% 55%;
-    --sidebar-primary: 30 52% 55%;
-    --sidebar-primary-foreground: 218 35% 6%;
+    --sidebar-background: 220 13% 8%;
+    --sidebar-foreground: 220 9% 89%;
+    --sidebar-border: 220 13% 15%;
+    --sidebar-accent: 220 13% 13%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-ring: 245 58% 60%;
+    --sidebar-primary: 245 58% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
   }
 }
 
@@ -160,27 +148,17 @@ html {
   body {
     @apply bg-background text-foreground font-sans;
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.65;
   }
 
-  /* Headings use serif for authoritative, legal feel */
+  /* Headings */
   h1, h2, h3, h4, h5, h6 {
     @apply font-sans font-semibold tracking-tight;
-  }
-
-  /* Large display headings can use serif */
-  .heading-display {
-    @apply font-serif;
   }
 
   /* Monospace for technical content */
   code, pre {
     font-family: var(--font-mono), 'JetBrains Mono', 'Fira Code', monospace;
-  }
-
-  /* Links */
-  a {
-    @apply text-navy-700 dark:text-amber-400 hover:text-amber-600 transition-colors;
   }
 }
 
@@ -188,93 +166,19 @@ html {
    COMPONENT STYLES
    ======================================== */
 @layer components {
-  /* Contract/Document Text Style */
-  .contract-text {
-    @apply font-serif text-base leading-relaxed text-navy-800 dark:text-slate-200;
+  /* Primary button style */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:opacity-90 transition-opacity;
   }
 
-  .contract-heading {
-    @apply font-serif font-bold text-navy-900 dark:text-white tracking-tight;
+  /* Secondary/ghost button */
+  .btn-secondary {
+    @apply bg-transparent border border-border text-muted-foreground hover:bg-secondary transition-colors;
   }
 
-  /* Amount/Variable Highlight */
-  .amount-highlight {
-    @apply font-semibold text-amber-600 dark:text-amber-400;
-  }
-
-  /* Hash/Address Display */
-  .hash-display {
-    @apply font-mono text-sm bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-navy-700 dark:text-slate-300;
-  }
-
-  /* Status Badges */
-  .status-verified {
-    @apply bg-sage-100 text-sage-700 dark:bg-sage-900/30 dark:text-sage-400;
-  }
-
-  .status-pending {
-    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
-  }
-
-  .status-alert {
-    @apply bg-alert-100 text-alert-700 dark:bg-alert-900/30 dark:text-alert-400;
-  }
-
-  .status-draft {
-    @apply bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400;
-  }
-
-  /* Cards with subtle hover */
-  .card-interactive {
-    @apply transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5;
-  }
-
-  /* State Machine Node */
-  .state-node {
-    @apply relative rounded-lg border-2 p-4 transition-all duration-300;
-  }
-
-  .state-node-active {
-    @apply border-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-amber-glow;
-  }
-
-  .state-node-completed {
-    @apply border-sage-500 bg-sage-50 dark:bg-sage-900/20 shadow-sage-glow;
-  }
-
-  .state-node-pending {
-    @apply border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900;
-  }
-
-  .state-node-dispute {
-    @apply border-alert-500 bg-alert-50 dark:bg-alert-900/20;
-  }
-
-  /* Escrow Amount Display */
-  .escrow-amount {
-    @apply font-mono text-2xl font-bold text-navy-900 dark:text-white;
-  }
-
-  .escrow-label {
-    @apply text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider;
-  }
-
-  /* Timeline connector */
-  .timeline-connector {
-    @apply absolute left-1/2 -translate-x-1/2 w-0.5 bg-slate-200 dark:bg-slate-700;
-  }
-
-  .timeline-connector-active {
-    @apply bg-amber-400;
-  }
-
-  .timeline-connector-completed {
-    @apply bg-sage-500;
-  }
-
-  /* Document Section */
-  .document-section {
-    @apply border-l-4 border-amber-400 pl-6 py-2;
+  /* Card with subtle shadow */
+  .card-elevated {
+    @apply bg-card rounded-xl border border-border shadow-sm;
   }
 
   /* Shimmer loading effect */
@@ -295,78 +199,49 @@ html {
    UTILITY CLASSES
    ======================================== */
 @layer utilities {
-  /* Text gradient for emphasis */
-  .text-gradient-amber {
-    @apply bg-gradient-to-r from-amber-600 to-amber-400 bg-clip-text text-transparent;
-  }
-
-  .text-gradient-navy {
-    @apply bg-gradient-to-r from-navy-800 to-navy-600 bg-clip-text text-transparent;
-  }
-
-  /* Subtle patterns */
-  .pattern-dots {
-    background-image: radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-
-  .pattern-grid {
-    background-image: 
-      linear-gradient(hsl(var(--border)) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-
-  /* Glass effect */
-  .glass {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md;
-  }
-
   /* Focus ring style */
   .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-background;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background;
   }
 
   /* Animation delays for staggered reveals */
   .delay-100 { animation-delay: 100ms; }
   .delay-200 { animation-delay: 200ms; }
   .delay-300 { animation-delay: 300ms; }
-  .delay-400 { animation-delay: 400ms; }
-  .delay-500 { animation-delay: 500ms; }
 }
 
 /* ========================================
    SCROLLBAR STYLES
    ======================================== */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-slate-100 dark:bg-slate-800;
-  border-radius: 10px;
+  @apply bg-transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-600;
-  border-radius: 10px;
+  @apply bg-border rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400 dark:bg-slate-500;
+  @apply bg-muted-foreground/30;
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted) / 0.3);
+  scrollbar-color: hsl(var(--border)) transparent;
 }
 
-/* Sidebar scrollbar */
-[data-sidebar="content"] {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--sidebar-foreground) / 0.2) transparent;
+/* ========================================
+   KEYFRAMES
+   ======================================== */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ========================================
@@ -381,13 +256,5 @@ html {
     @apply text-black bg-white;
     font-size: 12pt;
     line-height: 1.5;
-  }
-  
-  .contract-text {
-    @apply text-black;
-  }
-  
-  .hash-display {
-    @apply border border-slate-300 bg-transparent;
   }
 }
