@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,20 +18,59 @@ import {
   AlertTriangle,
   TrendingUp,
   Zap,
-  Download
+  Download,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react"
 
+const sections = [
+  { id: "intro", num: "01", title: "Introduction & Problem Statement", icon: Zap },
+  { id: "protocol", num: "02", title: "The SciFlow Protocol", icon: FlaskConical },
+  { id: "state-machine", num: "03", title: "State Machine Architecture", icon: TrendingUp },
+  { id: "payments", num: "04", title: "Hybrid Payment Infrastructure", icon: Wallet },
+  { id: "por", num: "05", title: "Proof of Research (PoR)", icon: Shield },
+  { id: "staking", num: "06", title: "Staking & Slashing Mechanics", icon: Lock },
+  { id: "disputes", num: "07", title: "Dispute Resolution", icon: Scale },
+  { id: "economics", num: "08", title: "Economic Model", icon: TrendingUp },
+  { id: "implementation", num: "09", title: "Technical Implementation", icon: FileText },
+  { id: "governance", num: "10", title: "Governance & Roadmap", icon: Users },
+]
+
 export default function WhitepaperPage() {
+  const [activeSection, setActiveSection] = useState("intro")
+  const [tocExpanded, setTocExpanded] = useState(true)
+
+  const scrollToSection = (sectionId: string) => {
+    setActiveSection(sectionId)
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }
+
+  const handleDownloadPDF = () => {
+    // In production, this would link to an actual PDF
+    alert("PDF download will be available soon. The whitepaper content is displayed below.")
+  }
+
   return (
-    <div className="min-h-screen bg-white dark:bg-navy-950">
+    <div className="min-h-screen bg-white dark:bg-slate-950">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-navy-950/95 backdrop-blur border-b border-slate-200 dark:border-navy-800">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-navy-800 dark:hover:text-white transition-colors">
+          <Link 
+            href="/" 
+            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
             <ArrowLeft className="w-4 h-4" />
-            Back to Home
+            <span>Back to Home</span>
           </Link>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleDownloadPDF}
+            className="border-slate-200 hover:bg-slate-50"
+          >
             <Download className="w-4 h-4 mr-2" />
             Download PDF
           </Button>
@@ -40,19 +80,19 @@ export default function WhitepaperPage() {
       {/* Content */}
       <main className="max-w-4xl mx-auto px-6 py-12">
         {/* Title Block */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <Badge className="mb-4 bg-amber-100 text-amber-700 border-amber-200">
             <FileText className="w-3 h-3 mr-1" />
             Technical Whitepaper v1.0
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold text-navy-800 dark:text-white mb-4 font-serif">
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
             SciFlow Protocol
           </h1>
-          <p className="text-xl text-muted-foreground">
-            A Decentralized Research Bounty Marketplace with<br />
+          <p className="text-lg text-slate-500 max-w-xl mx-auto">
+            A Decentralized Research Bounty Marketplace with
             Milestone-Based Escrow and Proof of Research
           </p>
-          <div className="mt-6 flex items-center justify-center gap-6 text-sm text-muted-foreground">
+          <div className="mt-4 flex items-center justify-center gap-4 text-sm text-slate-400">
             <span>January 2026</span>
             <span>•</span>
             <span>Version 1.0</span>
@@ -60,61 +100,81 @@ export default function WhitepaperPage() {
         </div>
 
         {/* Abstract */}
-        <Card className="border-0 shadow-clause-md mb-12 bg-slate-50 dark:bg-navy-900">
-          <CardContent className="p-8">
-            <h2 className="text-lg font-semibold text-navy-800 dark:text-white mb-4">Abstract</h2>
-            <p className="text-muted-foreground leading-relaxed font-serif">
+        <Card className="border-slate-200 mb-10">
+          <CardContent className="p-6">
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Abstract</h2>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
               SciFlow introduces a novel approach to research funding through decentralized bounties, 
               combining milestone-based escrow with on-chain proof of research. By leveraging smart 
               contracts on Solana and Base networks alongside traditional payment rails via Stripe, 
               SciFlow creates a hybrid payment infrastructure that serves both crypto-native and 
               traditional funders. The protocol implements a state machine-driven workflow that 
               ensures accountability, prevents fraud through staking mechanisms, and provides 
-              transparent dispute resolution. This paper outlines the technical architecture, 
-              economic model, and governance framework of the SciFlow protocol.
+              transparent dispute resolution.
             </p>
           </CardContent>
         </Card>
 
-        {/* Table of Contents */}
-        <nav className="mb-16">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-            Contents
-          </h2>
-          <ol className="space-y-2 text-navy-700 dark:text-slate-300">
-            {[
-              "Introduction & Problem Statement",
-              "The SciFlow Protocol",
-              "State Machine Architecture",
-              "Hybrid Payment Infrastructure",
-              "Proof of Research (PoR)",
-              "Staking & Slashing Mechanics",
-              "Dispute Resolution",
-              "Economic Model",
-              "Technical Implementation",
-              "Governance & Roadmap",
-            ].map((item, i) => (
-              <li key={i} className="flex items-center gap-3">
-                <span className="text-amber-500 font-mono">{(i + 1).toString().padStart(2, '0')}</span>
-                <span className="hover:text-amber-600 cursor-pointer">{item}</span>
-              </li>
-            ))}
-          </ol>
+        {/* Table of Contents - Collapsible */}
+        <nav className="mb-12 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+          <button 
+            onClick={() => setTocExpanded(!tocExpanded)}
+            className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+              Table of Contents
+            </span>
+            {tocExpanded ? (
+              <ChevronUp className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            )}
+          </button>
+          
+          {tocExpanded && (
+            <ol className="divide-y divide-slate-100 dark:divide-slate-800">
+              {sections.map((section) => (
+                <li key={section.id}>
+                  <button
+                    onClick={() => scrollToSection(section.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 ${
+                      activeSection === section.id 
+                        ? "bg-amber-50 dark:bg-amber-900/20 border-l-2 border-amber-500" 
+                        : ""
+                    }`}
+                  >
+                    <span className={`font-mono text-sm ${
+                      activeSection === section.id ? "text-amber-600" : "text-slate-400"
+                    }`}>
+                      {section.num}
+                    </span>
+                    <span className={`text-sm ${
+                      activeSection === section.id 
+                        ? "text-amber-700 dark:text-amber-400 font-medium" 
+                        : "text-slate-600 dark:text-slate-400"
+                    }`}>
+                      {section.title}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
         </nav>
 
         {/* Sections */}
-        <article className="prose prose-lg dark:prose-invert max-w-none">
-          {/* Section 1 */}
-          <section className="mb-16">
+        <article className="space-y-16">
+          {/* Section 1 - Introduction */}
+          <section id="intro" className="scroll-mt-24">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
                 <Zap className="w-5 h-5 text-amber-600" />
               </div>
-              <h2 className="text-2xl font-bold text-navy-800 dark:text-white m-0">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 1. Introduction & Problem Statement
               </h2>
             </div>
-            <div className="font-serif text-slate-700 dark:text-slate-300 space-y-4">
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
               <p>
                 Traditional research funding suffers from significant inefficiencies: slow grant 
                 processes, lack of accountability, and misaligned incentives between funders and 
@@ -122,195 +182,155 @@ export default function WhitepaperPage() {
                 reproducible results, yet researchers face little consequence for these failures.
               </p>
               <p>
-                The DeSci (Decentralized Science) movement has emerged to address these issues, 
-                but existing solutions often fail to bridge the gap between crypto-native tools 
-                and the practical needs of research institutions. SciFlow addresses this by 
-                providing a hybrid infrastructure that:
+                The DeSci (Decentralized Science) movement has emerged to address these issues. 
+                SciFlow provides a hybrid infrastructure that:
               </p>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-sage-500 mt-1 flex-shrink-0" />
-                  <span>Connects funders directly with verified research labs</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-sage-500 mt-1 flex-shrink-0" />
-                  <span>Implements milestone-based payments that align incentives</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-sage-500 mt-1 flex-shrink-0" />
-                  <span>Creates immutable proof of research deliverables</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-sage-500 mt-1 flex-shrink-0" />
-                  <span>Supports both fiat and cryptocurrency payments</span>
-                </li>
+              <ul className="space-y-2 ml-4">
+                {[
+                  "Connects funders directly with verified research labs",
+                  "Implements milestone-based payments that align incentives",
+                  "Creates immutable proof of research deliverables",
+                  "Supports both fiat and cryptocurrency payments",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           </section>
 
-          {/* Section 2 */}
-          <section className="mb-16">
+          {/* Section 2 - Protocol */}
+          <section id="protocol" className="scroll-mt-24">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-navy-100 dark:bg-navy-800">
-                <FlaskConical className="w-5 h-5 text-navy-600 dark:text-navy-300" />
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <FlaskConical className="w-5 h-5 text-blue-600" />
               </div>
-              <h2 className="text-2xl font-bold text-navy-800 dark:text-white m-0">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 2. The SciFlow Protocol
               </h2>
             </div>
-            <div className="font-serif text-slate-700 dark:text-slate-300 space-y-4">
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
               <p>
                 SciFlow operates as a two-sided marketplace connecting <strong>Funders</strong> 
                 (research sponsors, DAOs, foundations, corporations) with <strong>Labs</strong> 
                 (verified research institutions, independent scientists, university labs).
               </p>
               
-              <Card className="border-0 shadow-clause my-8">
-                <CardContent className="p-6">
-                  <h4 className="font-semibold text-navy-800 dark:text-white mb-4">Core Protocol Components</h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {[
-                      { icon: FileText, title: "Bounty Engine", desc: "Protocol definition, milestone specification, bidding system" },
-                      { icon: Lock, title: "Escrow Layer", desc: "Multi-method fund custody (Stripe, Solana, Base)" },
-                      { icon: Shield, title: "Verification System", desc: "Lab tiers, reputation scoring, KYC/KYB" },
-                      { icon: Scale, title: "Dispute Resolution", desc: "3-stage arbitration with stake slashing" },
-                    ].map((item) => (
-                      <div key={item.title} className="flex gap-3 p-3 bg-slate-50 dark:bg-navy-800/50 rounded-lg">
-                        <item.icon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-semibold text-navy-700 dark:text-white text-sm">{item.title}</p>
-                          <p className="text-muted-foreground text-sm">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
+              <div className="grid md:grid-cols-2 gap-3 mt-6">
+                {[
+                  { icon: FileText, title: "Bounty Engine", desc: "Protocol definition, milestone specification, bidding system" },
+                  { icon: Lock, title: "Escrow Layer", desc: "Multi-method fund custody (Stripe, Solana, Base)" },
+                  { icon: Shield, title: "Verification System", desc: "Lab tiers, reputation scoring, KYC/KYB" },
+                  { icon: Scale, title: "Dispute Resolution", desc: "3-stage arbitration with stake slashing" },
+                ].map((item) => (
+                  <div key={item.title} className="flex gap-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <item.icon className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-white text-sm">{item.title}</p>
+                      <p className="text-slate-500 text-sm">{item.desc}</p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
             </div>
           </section>
 
           {/* Section 3 - State Machine */}
-          <section className="mb-16">
+          <section id="state-machine" className="scroll-mt-24">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-sage-100 dark:bg-sage-900/30">
-                <TrendingUp className="w-5 h-5 text-sage-600" />
+              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
               </div>
-              <h2 className="text-2xl font-bold text-navy-800 dark:text-white m-0">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 3. State Machine Architecture
               </h2>
             </div>
-            <div className="font-serif text-slate-700 dark:text-slate-300 space-y-4">
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
               <p>
                 The bounty lifecycle is governed by a rigid state machine implemented using XState. 
                 This ensures deterministic transitions and prevents invalid operations.
               </p>
               
               {/* State Diagram */}
-              <Card className="border-0 shadow-clause my-8 bg-navy-800 text-white overflow-hidden">
-                <CardContent className="p-6">
-                  <h4 className="font-semibold mb-6">Bounty State Transitions</h4>
-                  <div className="flex flex-wrap gap-3 items-center justify-center">
-                    {[
-                      { state: "Drafting", color: "bg-slate-500" },
-                      { state: "Funding", color: "bg-amber-500" },
-                      { state: "Bidding", color: "bg-navy-500" },
-                      { state: "Research", color: "bg-sage-500" },
-                      { state: "Review", color: "bg-amber-500" },
-                      { state: "Completed", color: "bg-sage-500" },
-                    ].map((item, i) => (
-                      <div key={item.state} className="flex items-center gap-2">
-                        <div className={`px-4 py-2 rounded-lg ${item.color} text-white font-mono text-sm`}>
-                          {item.state}
-                        </div>
-                        {i < 5 && <span className="text-slate-500">→</span>}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 p-4 bg-navy-900/50 rounded-lg">
-                    <p className="text-sm text-navy-200 font-mono">
-                      <span className="text-amber-400">dispute_resolution</span> state can be entered 
-                      from <span className="text-sage-400">research</span> or <span className="text-amber-400">review</span> states
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="bg-slate-900 text-white rounded-lg p-6 my-6">
+                <h4 className="font-semibold mb-4 text-sm">Bounty State Transitions</h4>
+                <div className="flex flex-wrap gap-2 items-center justify-center">
+                  {[
+                    { state: "Draft", color: "bg-slate-600" },
+                    { state: "Funding", color: "bg-amber-500" },
+                    { state: "Bidding", color: "bg-blue-500" },
+                    { state: "Research", color: "bg-emerald-500" },
+                    { state: "Review", color: "bg-orange-500" },
+                    { state: "Complete", color: "bg-emerald-600" },
+                  ].map((item, i) => (
+                    <div key={item.state} className="flex items-center gap-1">
+                      <span className={`px-3 py-1.5 rounded ${item.color} text-white text-xs font-mono`}>
+                        {item.state}
+                      </span>
+                      {i < 5 && <span className="text-slate-500 text-xs">→</span>}
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 text-xs text-slate-400 text-center">
+                  Dispute state can be entered from Research or Review stages
+                </p>
+              </div>
 
               <p>
                 Each state transition is guarded by conditions that validate the current context. 
-                For example, transitioning from <code className="text-amber-600">funding_escrow</code> to{" "}
-                <code className="text-amber-600">bidding</code> requires confirmation that funds have 
-                been secured in the escrow contract.
+                For example, transitioning from funding to bidding requires confirmation that funds 
+                have been secured in the escrow contract.
               </p>
             </div>
           </section>
 
           {/* Section 4 - Payments */}
-          <section className="mb-16">
+          <section id="payments" className="scroll-mt-24">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
                 <Wallet className="w-5 h-5 text-amber-600" />
               </div>
-              <h2 className="text-2xl font-bold text-navy-800 dark:text-white m-0">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 4. Hybrid Payment Infrastructure
               </h2>
             </div>
-            <div className="font-serif text-slate-700 dark:text-slate-300 space-y-4">
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
               <p>
                 SciFlow supports three payment methods, each with its own escrow implementation:
               </p>
               
-              <div className="grid md:grid-cols-3 gap-4 my-8">
-                <Card className="border-0 shadow-clause">
-                  <CardContent className="p-6 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl">💳</span>
-                    </div>
-                    <h4 className="font-semibold text-navy-800 dark:text-white">Stripe</h4>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      PaymentIntent with manual capture. Funds held until milestone approval.
-                    </p>
-                    <Badge className="mt-3" variant="outline">Fiat USD</Badge>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-clause">
-                  <CardContent className="p-6 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl">◎</span>
-                    </div>
-                    <h4 className="font-semibold text-navy-800 dark:text-white">Solana</h4>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Anchor program with PDA escrow. Sub-second finality.
-                    </p>
-                    <Badge className="mt-3" variant="outline">USDC SPL</Badge>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-clause">
-                  <CardContent className="p-6 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl">🔵</span>
-                    </div>
-                    <h4 className="font-semibold text-navy-800 dark:text-white">Base</h4>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      ERC20 escrow contract via CREATE2 deterministic deployment.
-                    </p>
-                    <Badge className="mt-3" variant="outline">USDC ERC20</Badge>
-                  </CardContent>
-                </Card>
+              <div className="grid md:grid-cols-3 gap-4 my-6">
+                {[
+                  { emoji: "💳", name: "Stripe", desc: "PaymentIntent with manual capture", badge: "Fiat USD" },
+                  { emoji: "◎", name: "Solana", desc: "Anchor program with PDA escrow", badge: "USDC SPL" },
+                  { emoji: "🔵", name: "Base", desc: "ERC20 escrow via CREATE2", badge: "USDC ERC20" },
+                ].map((item) => (
+                  <Card key={item.name} className="border-slate-200">
+                    <CardContent className="p-5 text-center">
+                      <div className="text-3xl mb-3">{item.emoji}</div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white">{item.name}</h4>
+                      <p className="text-sm text-slate-500 mt-1">{item.desc}</p>
+                      <Badge variant="outline" className="mt-3 text-xs">{item.badge}</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           </section>
 
           {/* Section 5 - Proof of Research */}
-          <section className="mb-16">
+          <section id="por" className="scroll-mt-24">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-sage-100 dark:bg-sage-900/30">
-                <Shield className="w-5 h-5 text-sage-600" />
+              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <Shield className="w-5 h-5 text-emerald-600" />
               </div>
-              <h2 className="text-2xl font-bold text-navy-800 dark:text-white m-0">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 5. Proof of Research (PoR)
               </h2>
             </div>
-            <div className="font-serif text-slate-700 dark:text-slate-300 space-y-4">
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
               <p>
                 Every milestone submission includes cryptographic proof anchored on-chain:
               </p>
@@ -329,25 +349,25 @@ export default function WhitepaperPage() {
           </section>
 
           {/* Section 6 - Staking */}
-          <section className="mb-16">
+          <section id="staking" className="scroll-mt-24">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
                 <Lock className="w-5 h-5 text-amber-600" />
               </div>
-              <h2 className="text-2xl font-bold text-navy-800 dark:text-white m-0">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 6. Staking & Slashing Mechanics
               </h2>
             </div>
-            <div className="font-serif text-slate-700 dark:text-slate-300 space-y-4">
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
               <p>
                 Labs must stake tokens proportional to the bounty value when submitting proposals. 
-                This stake serves as collateral for good behavior:
+                This stake serves as collateral for good behavior.
               </p>
               
-              <Card className="border-0 shadow-clause my-8 bg-amber-50 dark:bg-amber-900/20 border-amber-200">
-                <CardContent className="p-6">
+              <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 my-6">
+                <CardContent className="p-5">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-1" />
+                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <div>
                       <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-2">Slashing Conditions</h4>
                       <ul className="space-y-1 text-amber-700 dark:text-amber-400 text-sm">
@@ -369,33 +389,143 @@ export default function WhitepaperPage() {
             </div>
           </section>
 
-          {/* Continue reading notice */}
-          <Card className="border-0 shadow-clause-md bg-gradient-to-r from-navy-800 to-navy-900 text-white">
-            <CardContent className="p-8 text-center">
-              <h3 className="text-xl font-bold mb-4">Full Whitepaper</h3>
-              <p className="text-navy-200 mb-6">
-                The complete whitepaper includes detailed sections on Dispute Resolution, 
-                Economic Model, Technical Implementation, and Governance Roadmap.
+          {/* Section 7 - Disputes */}
+          <section id="disputes" className="scroll-mt-24">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
+                <Scale className="w-5 h-5 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                7. Dispute Resolution
+              </h2>
+            </div>
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
+              <p>
+                Disputes are handled through a three-stage process:
               </p>
-              <Button className="bg-amber-500 hover:bg-amber-400 text-navy-900">
-                <Download className="w-4 h-4 mr-2" />
-                Download Full PDF (2.4 MB)
-              </Button>
+              <ol className="list-decimal list-inside space-y-2 ml-4">
+                <li><strong>Negotiation (7 days)</strong> - Direct communication between parties</li>
+                <li><strong>Mediation (14 days)</strong> - Platform-facilitated resolution</li>
+                <li><strong>Arbitration (21 days)</strong> - Binding decision by expert panel</li>
+              </ol>
+              <p>
+                Arbitrators are selected from a pool of verified domain experts who stake tokens 
+                to participate. Their decisions can result in full or partial fund release, 
+                stake slashing, or bounty cancellation with refund.
+              </p>
+            </div>
+          </section>
+
+          {/* Section 8 - Economics */}
+          <section id="economics" className="scroll-mt-24">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                8. Economic Model
+              </h2>
+            </div>
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
+              <p>
+                SciFlow charges a 2.5% platform fee on successful bounty completions. Fee structure:
+              </p>
+              <ul className="space-y-2 ml-4">
+                <li>• 1.5% to platform treasury for operations</li>
+                <li>• 0.5% to staking rewards pool</li>
+                <li>• 0.5% to dispute resolution reserve</li>
+              </ul>
+              <p>
+                Labs receive 97.5% of the bounty value upon milestone approvals. Funders pay 
+                the full bounty amount plus any applicable payment processor fees.
+              </p>
+            </div>
+          </section>
+
+          {/* Section 9 - Implementation */}
+          <section id="implementation" className="scroll-mt-24">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+                <FileText className="w-5 h-5 text-slate-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                9. Technical Implementation
+              </h2>
+            </div>
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
+              <p>
+                SciFlow is built on a modern tech stack:
+              </p>
+              <ul className="space-y-2 ml-4">
+                <li>• <strong>Frontend:</strong> Next.js 16, React, Tailwind CSS</li>
+                <li>• <strong>State Machine:</strong> XState for bounty lifecycle management</li>
+                <li>• <strong>Backend:</strong> Supabase (PostgreSQL) with Row-Level Security</li>
+                <li>• <strong>Blockchain:</strong> Solana (Anchor) and Base (Solidity)</li>
+                <li>• <strong>Storage:</strong> IPFS/Arweave for evidence files</li>
+              </ul>
+            </div>
+          </section>
+
+          {/* Section 10 - Governance */}
+          <section id="governance" className="scroll-mt-24">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                10. Governance & Roadmap
+              </h2>
+            </div>
+            <div className="text-slate-600 dark:text-slate-300 space-y-4">
+              <p>
+                SciFlow will progressively decentralize governance through a DAO structure:
+              </p>
+              <ul className="space-y-2 ml-4">
+                <li>• <strong>Q1 2026:</strong> Platform launch with centralized operations</li>
+                <li>• <strong>Q2 2026:</strong> Introduce staking and reputation system</li>
+                <li>• <strong>Q3 2026:</strong> Launch arbitrator network</li>
+                <li>• <strong>Q4 2026:</strong> Transition to DAO governance</li>
+              </ul>
+            </div>
+          </section>
+
+          {/* CTA */}
+          <Card className="bg-slate-900 border-0 text-white">
+            <CardContent className="p-8 text-center">
+              <h3 className="text-xl font-bold mb-3">Ready to Get Started?</h3>
+              <p className="text-slate-300 mb-6 max-w-md mx-auto">
+                Join SciFlow to fund breakthrough research or offer your lab&apos;s expertise.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link href="/dashboard">
+                  <Button className="bg-amber-500 hover:bg-amber-400 text-slate-900">
+                    Launch App
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  className="border-slate-600 text-white hover:bg-slate-800"
+                  onClick={handleDownloadPDF}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download PDF
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </article>
       </main>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-slate-200 dark:border-navy-800 mt-16">
+      <footer className="py-10 border-t border-slate-200 dark:border-slate-800 mt-12">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-navy-800 flex items-center justify-center">
-              <FlaskConical className="w-5 h-5 text-amber-400" />
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center">
+              <FlaskConical className="w-4 h-4 text-amber-400" />
             </div>
-            <span className="font-bold text-navy-800 dark:text-white">SciFlow</span>
+            <span className="font-semibold text-slate-900 dark:text-white">SciFlow</span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-slate-500">
             © 2026 SciFlow Protocol. Licensed under MIT.
           </p>
         </div>
