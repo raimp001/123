@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import type { Lab } from '@/types/database'
 
 interface LabWithStats extends Lab {
@@ -10,9 +9,9 @@ interface LabWithStats extends Lab {
 }
 
 interface UseLabsOptions {
-  tier?: string
+  verification_tier?: string
   search?: string
-  specialty?: string
+  expertise?: string[]
   limit?: number
 }
 
@@ -20,55 +19,56 @@ interface UseLabsReturn {
   labs: LabWithStats[]
   isLoading: boolean
   error: Error | null
-  refresh: () => Promise<void>
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  refetch: () => Promise<void>
 }
 
 export function useLabs(options: UseLabsOptions = {}): UseLabsReturn {
   const [labs, setLabs] = useState<LabWithStats[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [total, setTotal] = useState(0)
+
+  const limit = options.limit || 20
 
   const fetchLabs = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
 
-      const supabase = createClient()
-      
-      if (!supabase) {
-        setLabs([])
-        return
+      const params = new URLSearchParams({
+        limit: String(limit),
+      })
+
+      if (options.verification_tier && options.verification_tier !== 'all') {
+        params.set('verification_tier', options.verification_tier)
       }
-
-      let query = supabase
-        .from('labs')
-        .select('*')
-        .order('reputation_score', { ascending: false })
-
-      if (options.limit) {
-        query = query.limit(options.limit)
-      }
-
-      if (options.tier && options.tier !== 'all') {
-        query = query.eq('verification_tier', options.tier)
-      }
-
       if (options.search) {
-        query = query.or(`name.ilike.%${options.search}%,specialties.cs.{${options.search}}`)
+        params.set('search', options.search)
+      }
+      options.expertise?.forEach(e => params.append('expertise', e))
+
+      const response = await fetch(`/api/labs?${params}`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch labs')
       }
 
-      const { data, error: queryError } = await query
-
-      if (queryError) throw queryError
-
-      setLabs(data || [])
+      setLabs(data.labs || [])
+      setTotal(data.pagination?.total || 0)
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch labs'))
       setLabs([])
     } finally {
       setIsLoading(false)
     }
-  }, [options.tier, options.search, options.limit])
+  }, [limit, options.verification_tier, options.search, options.expertise])
 
   useEffect(() => {
     fetchLabs()
@@ -78,7 +78,13 @@ export function useLabs(options: UseLabsOptions = {}): UseLabsReturn {
     labs,
     isLoading,
     error,
-    refresh: fetchLabs,
+    pagination: {
+      page: 1,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    refetch: fetchLabs,
   }
 }
 

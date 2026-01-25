@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "npx tsx scripts/seed.ts",
+    "db:migrate": "echo 'Run lib/db/migrations/001_initial_schema.sql in Supabase SQL Editor'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -62,7 +64,8 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
     "xstate": "^5.25.1",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "stripe": "^17.5.0"
   },
   "devDependencies": {
     "@types/node": "^22",
@@ -70,6 +73,7 @@
     "@types/react-dom": "^19",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.7.0",
     "typescript": "^5"
   }
 }
