@@ -14,7 +14,6 @@ import {
   Building2, 
   Bell, 
   Shield, 
-  Wallet, 
   CheckCircle2,
   ArrowRight,
   Microscope,
@@ -29,7 +28,13 @@ import {
   Calendar,
   Users,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  Lightbulb,
+  Scale,
+  Code,
+  GitBranch,
+  Zap,
+  Star
 } from "lucide-react"
 import { useBounties } from "@/hooks/use-bounties"
 import { useState } from "react"
@@ -44,7 +49,7 @@ function daysUntil(date: string) {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 }
 
-// Example bounties to show new users what to expect
+// Example bounties with teaching context
 const exampleBounties = [
   {
     id: "example-1",
@@ -55,6 +60,8 @@ const exampleBounties = [
     deadline: "45 days",
     field: "Genetics",
     milestones: 4,
+    whyGood: "Clear deliverable (in-vitro validation), specific disease target, reasonable timeline for scope. Strong proposals would include preliminary data on delivery efficiency.",
+    proposalTip: "Include your lab's prior work with Cas9 variants, proposed vector choice, and success metrics for each milestone.",
   },
   {
     id: "example-2", 
@@ -65,6 +72,8 @@ const exampleBounties = [
     deadline: "90 days",
     field: "AI/ML",
     milestones: 5,
+    whyGood: "High-impact problem, good budget for compute + wet lab validation, 90-day timeline allows for proper model iteration.",
+    proposalTip: "Demonstrate access to training data (e.g., ChEMBL), propose specific model architectures, and include plan for wet lab validation partnership.",
   },
   {
     id: "example-3",
@@ -75,17 +84,67 @@ const exampleBounties = [
     deadline: "60 days",
     field: "Materials",
     milestones: 3,
+    whyGood: "Accessible entry point, clear characterization endpoints (tensile strength, biodegradability), manageable scope for smaller labs.",
+    proposalTip: "Highlight your characterization equipment access and any prior work with cellulose processing. Include target specs you aim to achieve.",
   },
 ]
 
-// Research focus areas
+// Research focus areas with demand/sizing data
 const focusAreas = [
-  { name: "Oncology", icon: Microscope, count: 0, description: "Cancer research and therapeutics" },
-  { name: "AI/ML", icon: Brain, count: 0, description: "Machine learning in life sciences" },
-  { name: "Genomics", icon: Dna, count: 0, description: "Gene editing and sequencing" },
-  { name: "Materials", icon: Atom, count: 0, description: "Novel materials and polymers" },
-  { name: "Sustainability", icon: Leaf, count: 0, description: "Green chemistry and biotech" },
-  { name: "Therapeutics", icon: Heart, count: 0, description: "Drug discovery and delivery" },
+  { 
+    name: "Oncology", 
+    icon: Microscope, 
+    avgBudget: "$80-150K",
+    avgTimeline: "60-120 days",
+    demand: "High",
+    demandColor: "text-emerald-400",
+    description: "Cancer research, immunotherapy, tumor markers" 
+  },
+  { 
+    name: "AI/ML", 
+    icon: Brain, 
+    avgBudget: "$50-120K",
+    avgTimeline: "45-90 days",
+    demand: "Very High",
+    demandColor: "text-amber-400",
+    description: "Drug discovery, protein folding, biomarker prediction" 
+  },
+  { 
+    name: "Genomics", 
+    icon: Dna, 
+    avgBudget: "$60-100K",
+    avgTimeline: "45-90 days",
+    demand: "High",
+    demandColor: "text-emerald-400",
+    description: "CRISPR, gene therapy, sequencing analysis" 
+  },
+  { 
+    name: "Materials", 
+    icon: Atom, 
+    avgBudget: "$30-75K",
+    avgTimeline: "30-60 days",
+    demand: "Medium",
+    demandColor: "text-blue-400",
+    description: "Biomaterials, sustainable polymers, nanotechnology" 
+  },
+  { 
+    name: "Sustainability", 
+    icon: Leaf, 
+    avgBudget: "$40-90K",
+    avgTimeline: "60-90 days",
+    demand: "Growing",
+    demandColor: "text-emerald-400",
+    description: "Carbon capture, biofuels, circular economy" 
+  },
+  { 
+    name: "Therapeutics", 
+    icon: Heart, 
+    avgBudget: "$100-200K",
+    avgTimeline: "90-180 days",
+    demand: "High",
+    demandColor: "text-emerald-400",
+    description: "Drug delivery, formulation, clinical precursors" 
+  },
 ]
 
 // Upcoming bounties preview
@@ -99,6 +158,8 @@ export default function OpenBountiesPage() {
   const [search, setSearch] = useState("")
   const [notifyEmail, setNotifyEmail] = useState("")
   const [selectedField, setSelectedField] = useState<string | null>(null)
+  const [notifyRole, setNotifyRole] = useState<"lab" | "funder" | null>(null)
+  const [budgetRange, setBudgetRange] = useState<string>("")
   const { bounties, isLoading, error } = useBounties({ 
     state: "bidding",
     search: search || undefined 
@@ -252,7 +313,7 @@ export default function OpenBountiesPage() {
             </CardContent>
           </Card>
 
-          {/* Example bounties */}
+          {/* Example bounties with teaching context */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-900 flex items-center gap-2">
@@ -260,10 +321,10 @@ export default function OpenBountiesPage() {
                 Example Bounties
               </h3>
               <Badge variant="outline" className="text-slate-500 border-slate-300">
-                Sample Format
+                Learn What Works
               </Badge>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {exampleBounties.map((bounty) => (
                 <Card key={bounty.id} className="border-dashed border-slate-300 bg-slate-50/50">
                   <CardContent className="p-5">
@@ -275,7 +336,25 @@ export default function OpenBountiesPage() {
                             Example
                           </Badge>
                         </div>
-                        <p className="text-sm text-slate-500 line-clamp-2">{bounty.description}</p>
+                        <p className="text-sm text-slate-500 mb-3">{bounty.description}</p>
+                        
+                        {/* Teaching context */}
+                        <div className="space-y-2 mt-3 pt-3 border-t border-slate-200">
+                          <div className="flex items-start gap-2">
+                            <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-medium text-slate-700">Why this is a good bounty:</p>
+                              <p className="text-xs text-slate-500">{bounty.whyGood}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <Star className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-xs font-medium text-slate-700">Strong proposal tip:</p>
+                              <p className="text-xs text-slate-500">{bounty.proposalTip}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
@@ -301,29 +380,39 @@ export default function OpenBountiesPage() {
             {/* Left column - Focus areas and upcoming */}
             <div className="lg:col-span-2 space-y-6">
               
-              {/* Focus areas discovery */}
+              {/* Focus areas with demand data */}
               <Card className="border-slate-200">
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-slate-900 mb-4">Research Focus Areas</h3>
+                  <h3 className="font-semibold text-slate-900 mb-2">Research Focus Areas</h3>
                   <p className="text-sm text-slate-500 mb-4">
-                    Browse fields we&apos;re actively sourcing bounties for. Click to get notified when opportunities open.
+                    Typical project sizes and current demand levels. Click to get notified when opportunities open.
                   </p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {focusAreas.map((area) => (
                       <button
                         key={area.name}
                         onClick={() => setSelectedField(selectedField === area.name ? null : area.name)}
-                        className={`p-3 rounded-lg border text-left transition-all ${
+                        className={`p-4 rounded-lg border text-left transition-all ${
                           selectedField === area.name
                             ? "border-amber-400 bg-amber-50"
                             : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
-                        <area.icon className={`w-5 h-5 mb-2 ${
-                          selectedField === area.name ? "text-amber-600" : "text-slate-400"
-                        }`} />
-                        <p className="font-medium text-sm text-slate-900">{area.name}</p>
-                        <p className="text-xs text-slate-500">{area.description}</p>
+                        <div className="flex items-start justify-between mb-2">
+                          <area.icon className={`w-5 h-5 ${
+                            selectedField === area.name ? "text-amber-600" : "text-slate-400"
+                          }`} />
+                          <Badge variant="outline" className={`text-xs ${area.demandColor}`}>
+                            {area.demand}
+                          </Badge>
+                        </div>
+                        <p className="font-medium text-sm text-slate-900 mb-1">{area.name}</p>
+                        <p className="text-xs text-slate-500 mb-2">{area.description}</p>
+                        <div className="flex items-center gap-3 text-xs text-slate-400">
+                          <span>{area.avgBudget}</span>
+                          <span>•</span>
+                          <span>{area.avgTimeline}</span>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -357,39 +446,49 @@ export default function OpenBountiesPage() {
             {/* Right column - Trust, notifications, social proof */}
             <div className="space-y-6">
               
-              {/* Trust indicators */}
+              {/* Enhanced Platform Guarantees with specifics */}
               <Card className="border-slate-200 bg-gradient-to-br from-slate-900 to-slate-800 text-white">
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
                     <Shield className="w-5 h-5 text-emerald-400" />
                     Platform Guarantees
                   </h3>
-                  <ul className="space-y-3 text-sm">
+                  <ul className="space-y-4 text-sm">
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <span>Escrow-protected funds until milestone completion</span>
+                      <div>
+                        <span className="font-medium">Escrow-protected funds</span>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Funds held in Solana/Base smart contracts. Released only when funder approves milestone or 7-day auto-release triggers.
+                        </p>
+                      </div>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <span>Verified lab credentials and reputation scores</span>
+                      <div>
+                        <span className="font-medium">Independent arbitration</span>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Disputes resolved by 3-person arbitration panel within 72 hours. $500 filing fee (refunded if you win).
+                        </p>
+                      </div>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <span>Crypto (USDC) and fiat (Stripe) support</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <span>Independent dispute resolution</span>
+                      <div>
+                        <span className="font-medium">Verified lab credentials</span>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Labs verify institutional affiliation, publications, and equipment access. Reputation scores based on completed bounties.
+                        </p>
+                      </div>
                     </li>
                   </ul>
                   <Link href="/whitepaper#por" className="mt-4 flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300">
-                    Learn about Proof of Research
-                    <ArrowRight className="w-3 h-3" />
+                    Full trust framework →
                   </Link>
                 </CardContent>
               </Card>
 
-              {/* Notification signup */}
+              {/* Enhanced notification signup */}
               <Card className="border-amber-200 bg-amber-50">
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
@@ -397,9 +496,60 @@ export default function OpenBountiesPage() {
                     Get Notified
                   </h3>
                   <p className="text-sm text-slate-600 mb-4">
-                    Be first to know when bounties open
-                    {selectedField && <span className="font-medium"> in {selectedField}</span>}.
+                    Be first to know when bounties match your interests.
                   </p>
+                  
+                  {/* Role selection */}
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      onClick={() => setNotifyRole(notifyRole === "lab" ? null : "lab")}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${
+                        notifyRole === "lab"
+                          ? "bg-emerald-500 text-white"
+                          : "bg-white border border-slate-200 text-slate-600 hover:border-emerald-300"
+                      }`}
+                    >
+                      I&apos;m a Lab
+                    </button>
+                    <button
+                      onClick={() => setNotifyRole(notifyRole === "funder" ? null : "funder")}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${
+                        notifyRole === "funder"
+                          ? "bg-amber-500 text-white"
+                          : "bg-white border border-slate-200 text-slate-600 hover:border-amber-300"
+                      }`}
+                    >
+                      I&apos;m a Funder
+                    </button>
+                  </div>
+                  
+                  {/* Field preference (shown if lab selected) */}
+                  {selectedField && (
+                    <div className="mb-3 p-2 rounded bg-white border border-amber-200 text-xs">
+                      <span className="text-slate-500">Interested in:</span>{" "}
+                      <span className="font-medium text-slate-900">{selectedField}</span>
+                    </div>
+                  )}
+                  
+                  {/* Budget range (shown if funder) */}
+                  {notifyRole === "funder" && (
+                    <div>
+                      <label htmlFor="budget-range" className="sr-only">Budget range</label>
+                      <select
+                        id="budget-range"
+                        value={budgetRange}
+                        onChange={(e) => setBudgetRange(e.target.value)}
+                        className="w-full mb-3 p-2 rounded-lg border border-slate-200 text-sm bg-white"
+                        title="Select your preferred budget range"
+                      >
+                        <option value="">Budget range (optional)</option>
+                        <option value="0-50k">Under $50K</option>
+                        <option value="50-100k">$50K - $100K</option>
+                        <option value="100k+">$100K+</option>
+                      </select>
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     <Input
                       type="email"
@@ -445,36 +595,51 @@ export default function OpenBountiesPage() {
                       <span className="font-bold text-slate-900">$340K</span>
                     </div>
                   </div>
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <Link href="/#founding" className="text-xs text-amber-600 hover:underline flex items-center gap-1">
+                      <Zap className="w-3 h-3" />
+                      Join the Founding Cohort →
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Developer links */}
+              {/* Developer links with value framing */}
               <Card className="border-slate-200">
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-slate-900 mb-3">For Developers</h3>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Link 
                       href="/whitepaper" 
-                      className="flex items-center justify-between p-2 rounded hover:bg-slate-50 text-sm text-slate-600 hover:text-slate-900"
+                      className="flex items-start gap-3 p-2 rounded hover:bg-slate-50"
                     >
-                      <span>Technical Whitepaper</span>
-                      <FileText className="w-4 h-4" />
+                      <FileText className="w-4 h-4 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Technical Whitepaper</p>
+                        <p className="text-xs text-slate-500">Protocol design, tokenomics, and security model</p>
+                      </div>
                     </Link>
                     <a 
                       href="https://github.com/sciflowlabs" 
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 rounded hover:bg-slate-50 text-sm text-slate-600 hover:text-slate-900"
+                      className="flex items-start gap-3 p-2 rounded hover:bg-slate-50"
                     >
-                      <span>GitHub Repository</span>
-                      <ExternalLink className="w-4 h-4" />
+                      <Code className="w-4 h-4 text-slate-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">GitHub Repository</p>
+                        <p className="text-xs text-slate-500">Modular escrow contracts, open for audit</p>
+                      </div>
                     </a>
                     <Link 
                       href="/whitepaper#state-machine" 
-                      className="flex items-center justify-between p-2 rounded hover:bg-slate-50 text-sm text-slate-600 hover:text-slate-900"
+                      className="flex items-start gap-3 p-2 rounded hover:bg-slate-50"
                     >
-                      <span>State Machine Docs</span>
-                      <FileText className="w-4 h-4" />
+                      <GitBranch className="w-4 h-4 text-amber-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">State Machine Docs</p>
+                        <p className="text-xs text-slate-500">XState-powered deterministic workflows</p>
+                      </div>
                     </Link>
                   </div>
                 </CardContent>
