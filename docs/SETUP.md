@@ -54,11 +54,13 @@ SOLANA_RPC_URL=https://api.devnet.solana.com
 SOLANA_ESCROW_PROGRAM_ID=your_program_id
 SOLANA_PLATFORM_WALLET=your_wallet_pubkey
 
-# Base (Required for Base USDC)
-BASE_RPC_URL=https://mainnet.base.org
-BASE_ESCROW_CONTRACT=0x...
+# Base via Coinbase CDP SDK (Required for Base USDC)
+CDP_API_KEY_NAME=your_cdp_api_key_name
+CDP_API_KEY_PRIVATE_KEY=your_cdp_private_key
+BASE_NETWORK=base-mainnet  # or base-sepolia for testnet
 BASE_USDC_ADDRESS=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 BASE_PLATFORM_WALLET=0x...
+BASE_ESCROW_CONTRACT=0x...
 
 # App Config
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -106,18 +108,49 @@ For production, use a dedicated RPC provider:
 
 ---
 
-## 5. Base Setup (EVM Payments)
+## 5. Base Setup (Coinbase CDP SDK)
 
-### Deploy Escrow Contract
+SciFlow uses the **Coinbase Developer Platform (CDP) SDK** for Base network operations.
 
+### Get CDP API Keys
+
+1. Go to [portal.cdp.coinbase.com](https://portal.cdp.coinbase.com)
+2. Create a new API key
+3. Download the JSON file or copy:
+   - `CDP_API_KEY_NAME` - the key name/ID
+   - `CDP_API_KEY_PRIVATE_KEY` - the private key
+
+### CDP SDK Features
+
+The CDP SDK provides:
+- **Wallet creation** - Create and manage wallets programmatically
+- **Token transfers** - Send USDC and other tokens
+- **Transaction signing** - Server-side transaction signing
+- **Address derivation** - Deterministic address generation
+
+### Deploy Escrow Contract (Optional)
+
+For advanced escrow features:
 1. Deploy an ERC20 escrow contract on Base
 2. Use OpenZeppelin's audited contracts as a base
-3. Test on Base Goerli before Mainnet
+3. Test on Base Sepolia before Mainnet
 
 ### USDC Address on Base
 
-- Mainnet: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
-- Testnet: Check Circle's documentation
+| Network | USDC Address |
+|---------|--------------|
+| Mainnet | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| Sepolia | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
+
+### Network Configuration
+
+```bash
+# For production
+BASE_NETWORK=base-mainnet
+
+# For testing
+BASE_NETWORK=base-sepolia
+```
 
 ---
 

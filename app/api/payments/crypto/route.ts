@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { solanaPayment } from '@/lib/payments/solana'
+import { baseCDPPayment, getExplorerTxUrl } from '@/lib/payments/base-cdp'
 
 // Crypto payment endpoints for Solana and Base USDC
+// Supports: Solana (SPL USDC) and Base (Coinbase CDP SDK)
+
+// GET /api/payments/crypto/status - Check payment service status
+export async function GET() {
+  return NextResponse.json({
+    solana: {
+      configured: solanaPayment.isConfigured(),
+      status: solanaPayment.getConfigStatus(),
+    },
+    base: {
+      configured: baseCDPPayment.isConfigured(),
+      status: baseCDPPayment.getConfigStatus(),
+    },
+    supported_chains: ['solana', 'base'],
+    token: 'USDC',
+  })
+}
 
 // POST /api/payments/crypto - Initialize crypto escrow
 export async function POST(request: NextRequest) {
@@ -51,50 +70,57 @@ export async function POST(request: NextRequest) {
     const platformFee = amount * platformFeePercent / 100
     const totalAmount = amount + platformFee
 
-    // Generate escrow details based on chain
+    // Generate escrow details based on chain using the appropriate service
     let escrowDetails: {
       escrow_address: string
       deposit_address: string
       expected_amount: number
       chain: string
       token: string
+      instructions?: Record<string, unknown>
+      chain_id?: number
     }
 
     if (chain === 'solana') {
-      // For Solana, generate PDA for escrow
-      const escrowProgramId = process.env.SOLANA_ESCROW_PROGRAM_ID
-      const platformWallet = process.env.SOLANA_PLATFORM_WALLET
+      // Use Solana payment service
+      const result = await solanaPayment.initializeDeposit({
+        bountyId: bounty_id,
+        funderWallet: wallet_address,
+        amount: totalAmount,
+      })
 
-      if (!escrowProgramId || !platformWallet) {
-        return NextResponse.json({ error: 'Solana escrow not configured' }, { status: 503 })
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 503 })
       }
 
-      // In production, derive PDA from program
-      // For now, return platform wallet as deposit address
       escrowDetails = {
-        escrow_address: `escrow_${bounty_id}_solana`,
-        deposit_address: platformWallet,
+        escrow_address: result.escrowPDA!,
+        deposit_address: result.depositAddress!,
         expected_amount: totalAmount,
         chain: 'solana',
         token: 'USDC',
+        instructions: solanaPayment.getDepositInstructions(result.depositAddress!, result.expectedAmount!),
       }
     } else {
-      // For Base, generate CREATE2 address for escrow contract
-      const escrowContract = process.env.BASE_ESCROW_CONTRACT
-      const platformWallet = process.env.BASE_PLATFORM_WALLET
-      const usdcAddress = process.env.BASE_USDC_ADDRESS
+      // Use Base CDP payment service
+      const result = await baseCDPPayment.initializeDeposit({
+        bountyId: bounty_id,
+        funderWallet: wallet_address,
+        amount: totalAmount,
+      })
 
-      if (!escrowContract || !platformWallet || !usdcAddress) {
-        return NextResponse.json({ error: 'Base escrow not configured' }, { status: 503 })
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 503 })
       }
 
-      // In production, compute CREATE2 address
       escrowDetails = {
-        escrow_address: `escrow_${bounty_id}_base`,
-        deposit_address: platformWallet,
+        escrow_address: result.escrowAddress!,
+        deposit_address: result.depositAddress!,
         expected_amount: totalAmount,
         chain: 'base',
         token: 'USDC',
+        chain_id: result.chainId,
+        instructions: baseCDPPayment.getDepositInstructions(result.depositAddress!, totalAmount),
       }
     }
 
@@ -189,10 +215,28 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
-    // In production, verify the transaction on-chain:
-    // - For Solana: Use @solana/web3.js to check transaction
-    // - For Base: Use ethers.js to check transaction
-    // For now, we'll accept the tx_hash and mark as funded
+    // Verify the transaction on-chain using the appropriate service
+    const chain = escrow.payment_method
+    let verificationResult: { success: boolean; txHash?: string; error?: string }
+
+    if (chain === 'solana') {
+      verificationResult = await solanaPayment.verifyDeposit(tx_hash, escrow.total_amount)
+    } else if (chain === 'base') {
+      verificationResult = await baseCDPPayment.verifyDeposit(tx_hash, escrow.total_amount)
+    } else {
+      return NextResponse.json({ error: 'Unknown chain' }, { status: 400 })
+    }
+
+    if (!verificationResult.success) {
+      return NextResponse.json({ 
+        error: verificationResult.error || 'Transaction verification failed' 
+      }, { status: 400 })
+    }
+
+    // Build explorer URL for the transaction
+    const explorerUrl = chain === 'base' 
+      ? getExplorerTxUrl(tx_hash, 'mainnet')
+      : `https://solscan.io/tx/${tx_hash}`
 
     // Update escrow status
     const { error: updateError } = await supabase
@@ -203,6 +247,8 @@ export async function PATCH(request: NextRequest) {
         chain_data: {
           ...escrow.chain_data,
           deposit_tx_hash: tx_hash,
+          explorer_url: explorerUrl,
+          verified_at: new Date().toISOString(),
         },
       })
       .eq('id', escrow_id)
@@ -233,7 +279,12 @@ export async function PATCH(request: NextRequest) {
       type: 'crypto_deposit_confirmed',
       title: 'Crypto Deposit Confirmed',
       message: 'Your bounty is now live and accepting proposals',
-      data: { bounty_id: escrow.bounty_id, tx_hash },
+      data: { 
+        bounty_id: escrow.bounty_id, 
+        tx_hash,
+        chain,
+        explorer_url: explorerUrl,
+      },
     })
 
     // Log activity
@@ -244,13 +295,16 @@ export async function PATCH(request: NextRequest) {
       details: { 
         escrow_id,
         tx_hash,
-        chain: escrow.payment_method,
+        chain,
+        explorer_url: explorerUrl,
       },
     })
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Deposit confirmed, bounty is now live' 
+      message: 'Deposit confirmed, bounty is now live',
+      tx_hash,
+      explorer_url: explorerUrl,
     })
   } catch (error) {
     console.error('Error in PATCH /api/payments/crypto:', error)
