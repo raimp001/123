@@ -158,11 +158,9 @@ export default function WhitepaperPage() {
                 <li key={section.id}>
                   <a
                     href={`#${section.id}`}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      scrollToSection(section.id)
-                      // Update URL hash without page jump
-                      window.history.pushState(null, "", `#${section.id}`)
+                    onClick={() => {
+                      setActiveSection(section.id)
+                      // Let the browser handle the hash navigation natively
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer ${
                       activeSection === section.id 

@@ -18,6 +18,18 @@
    ======================================== */
 
 /* ========================================
+   SMOOTH SCROLL BEHAVIOR
+   ======================================== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scroll margin for sections (accounts for sticky headers) */
+[id] {
+  scroll-margin-top: 140px;
+}
+
+/* ========================================
    CSS CUSTOM PROPERTIES - LIGHT THEME
    ======================================== */
 @layer base {
