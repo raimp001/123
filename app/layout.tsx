@@ -136,23 +136,22 @@ export default async function RootLayout({
             <AppSidebar />
             <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[sidebar-state=expanded]:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-linear">
               {/* Header with branding */}
-              <header className="sticky top-0 z-10 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
+              <header className="sticky top-0 z-10 flex items-center h-14 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
                 <div className="md:hidden">
                   <SidebarTrigger />
                 </div>
                 <Link href="/" className="ml-2 md:ml-0 flex items-center gap-2">
                   <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
-                    <path d="M9 3V11L5 19C4.5 20 5 21 6 21H18C19 21 19.5 20 19 19L15 11V3" stroke="url(#hg)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M9 3H15" stroke="url(#hg)" strokeWidth="1.5" strokeLinecap="round" />
-                    <circle cx="11" cy="15" r="1" fill="#34D399" />
-                    <circle cx="14" cy="16" r="0.8" fill="#6EE7B7" />
-                    <defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#10B981" /></linearGradient></defs>
+                    <path d="M9 3V11L5 19C4.5 20 5 21 6 21H18C19 21 19.5 20 19 19L15 11V3" stroke="hsl(20, 70%, 55%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9 3H15" stroke="hsl(20, 70%, 55%)" strokeWidth="1.5" strokeLinecap="round" />
+                    <circle cx="11" cy="15" r="1.2" fill="hsl(20, 70%, 55%)" />
+                    <circle cx="14" cy="16" r="0.9" fill="hsl(20, 70%, 65%)" />
                   </svg>
-                  <span className="text-base font-semibold text-slate-900 dark:text-white">Sci<span className="text-amber-500">Flow</span></span>
+                  <span className="text-base font-medium text-foreground">SciFlow</span>
                 </Link>
               </header>
               
-              <main className="flex-1 p-4 md:p-6 bg-secondary/30">{children}</main>
+              <main className="flex-1 p-4 md:p-6">{children}</main>
             </div>
           </SidebarProvider>
         </Providers>
