@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { ArrowLeft, BookOpen, Wallet, Shield, Clock, Scale, Globe } from "lucide-react"
 
 const sections = [
@@ -122,16 +121,16 @@ const sections = [
 
 export default function DocsPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#FAFAF9]">
       <div className="max-w-3xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-12">
-          <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
+          <Link href="/" className="inline-flex items-center text-sm text-[#6B7280] hover:text-[#111827] mb-6">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to Home
           </Link>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Documentation</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-[#111827] mb-2">Documentation</h1>
+          <p className="text-[#6B7280]">
             Everything you need to know about using SciFlow.
           </p>
         </div>
@@ -142,10 +141,11 @@ export default function DocsPage() {
             <a
               key={section.id}
               href={`#${section.id}`}
-              className="p-3 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors text-center"
+              className="p-3 rounded-xl border border-[#E5E7EB] bg-white hover:border-[#6B5FED]/30 transition-colors text-center"
+              style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
             >
-              <section.icon className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">{section.title}</span>
+              <section.icon className="w-5 h-5 mx-auto mb-2 text-[#6B7280]" />
+              <span className="text-sm font-medium text-[#111827]">{section.title}</span>
             </a>
           ))}
         </div>
@@ -155,20 +155,22 @@ export default function DocsPage() {
           {sections.map((section) => (
             <section key={section.id} id={section.id}>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <section.icon className="w-5 h-5 text-primary" />
+                <div className="w-10 h-10 rounded-lg bg-[#6B5FED]/10 flex items-center justify-center">
+                  <section.icon className="w-5 h-5 text-[#6B5FED]" />
                 </div>
-                <h2 className="text-xl font-semibold text-foreground">{section.title}</h2>
+                <h2 className="text-xl font-semibold text-[#111827]">{section.title}</h2>
               </div>
               
               <div className="space-y-4">
                 {section.content.map((item, i) => (
-                  <Card key={i} className="border-border">
-                    <CardContent className="p-5">
-                      <h3 className="font-medium text-foreground mb-2">{item.q}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
-                    </CardContent>
-                  </Card>
+                  <div 
+                    key={i} 
+                    className="p-5 bg-white border border-[#E5E7EB] rounded-xl"
+                    style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
+                  >
+                    <h3 className="font-medium text-[#111827] mb-2">{item.q}</h3>
+                    <p className="text-sm text-[#6B7280] leading-relaxed">{item.a}</p>
+                  </div>
                 ))}
               </div>
             </section>
@@ -176,17 +178,24 @@ export default function DocsPage() {
         </div>
 
         {/* Footer CTA */}
-        <div className="mt-16 p-8 rounded-xl bg-card border border-border text-center">
-          <h2 className="text-xl font-semibold text-foreground mb-2">Still have questions?</h2>
-          <p className="text-muted-foreground mb-4">
+        <div 
+          className="mt-16 p-8 rounded-xl bg-white border border-[#E5E7EB] text-center"
+          style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
+        >
+          <h2 className="text-xl font-semibold text-[#111827] mb-2">Still have questions?</h2>
+          <p className="text-[#6B7280] mb-4">
             Check our FAQ or reach out to the team.
           </p>
           <div className="flex justify-center gap-3">
             <Link href="/faq">
-              <Button variant="outline">View FAQ</Button>
+              <Button variant="outline" className="border-[#E5E7EB] text-[#111827] hover:bg-[#F3F4F6] rounded-lg">
+                View FAQ
+              </Button>
             </Link>
             <Link href="/help">
-              <Button>Contact Support</Button>
+              <Button className="bg-[#6B5FED] hover:bg-[#5B4FDD] text-white rounded-lg">
+                Contact Support
+              </Button>
             </Link>
           </div>
         </div>

@@ -311,13 +311,15 @@ export default function WhitepaperPage() {
               
               <div className="grid md:grid-cols-3 gap-4 my-6">
                 {[
-                  { emoji: "💳", name: "Stripe", desc: "PaymentIntent with manual capture", badge: "Fiat USD" },
-                  { emoji: "◎", name: "Solana", desc: "Anchor program with PDA escrow", badge: "USDC SPL" },
-                  { emoji: "🔵", name: "Base", desc: "ERC20 escrow via CREATE2", badge: "USDC ERC20" },
+                  { icon: "stripe", name: "Stripe", desc: "PaymentIntent with manual capture", badge: "Fiat USD" },
+                  { icon: "solana", name: "Solana", desc: "Anchor program with PDA escrow", badge: "USDC SPL" },
+                  { icon: "base", name: "Base", desc: "ERC20 escrow via CREATE2", badge: "USDC ERC20" },
                 ].map((item) => (
                   <Card key={item.name} className="border-slate-200">
                     <CardContent className="p-5 text-center">
-                      <div className="text-3xl mb-3">{item.emoji}</div>
+                      <div className="w-10 h-10 mx-auto mb-3 rounded-lg bg-slate-100 flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-slate-500" />
+                      </div>
                       <h4 className="font-semibold text-slate-900 dark:text-white">{item.name}</h4>
                       <p className="text-sm text-slate-500 mt-1">{item.desc}</p>
                       <Badge variant="outline" className="mt-3 text-xs">{item.badge}</Badge>
@@ -498,26 +500,26 @@ export default function WhitepaperPage() {
           </section>
 
           {/* CTA */}
-          <Card className="bg-slate-900 border-0 text-white">
+          <Card className="bg-[#6B5FED] border-0 text-white rounded-xl">
             <CardContent className="p-8 text-center">
-              <h3 className="text-xl font-bold mb-3">Ready to Get Started?</h3>
-              <p className="text-slate-300 mb-6 max-w-md mx-auto">
+              <h3 className="text-xl font-bold mb-3">Ready to fund your first bounty?</h3>
+              <p className="text-white/80 mb-6 max-w-md mx-auto">
                 Join SciFlow to fund breakthrough research or offer your lab&apos;s expertise.
               </p>
               <div className="flex items-center justify-center gap-3">
-                <Link href="/dashboard">
-                  <Button className="bg-amber-500 hover:bg-amber-400 text-slate-900">
-                    Launch App
+                <Link href="/signup">
+                  <Button className="bg-white hover:bg-[#F3F4F6] text-[#6B5FED] font-medium rounded-lg">
+                    Sign Up Now
                   </Button>
                 </Link>
-                <Button 
-                  variant="outline" 
-                  className="border-slate-600 text-white hover:bg-slate-800"
-                  onClick={handleDownloadPDF}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download PDF
-                </Button>
+                <Link href="/dashboard">
+                  <Button 
+                    variant="outline" 
+                    className="border-white/30 text-white hover:bg-white/10 rounded-lg"
+                  >
+                    Browse Bounties
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

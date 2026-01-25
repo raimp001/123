@@ -82,7 +82,7 @@ const faqs = [
       },
       {
         q: "Is SciFlow open source?",
-        a: "Core smart contracts are open source and auditable. The frontend and backend are source-available. See our GitHub for details."
+        a: "Core smart contracts will be open source and auditable once launched. The frontend and backend are source-available."
       }
     ]
   },
@@ -95,7 +95,7 @@ const faqs = [
       },
       {
         q: "How do I join?",
-        a: "Click 'Apply for Founding Cohort' on the homepage and complete the application. Spots are limited and allocated on a first-come, first-served basis."
+        a: "Click 'Apply Now' in the Founding Cohort section on the homepage and complete the application. Spots are limited and allocated on a first-come, first-served basis."
       },
       {
         q: "When does the Founding Cohort end?",
@@ -109,20 +109,20 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [isOpen, setIsOpen] = useState(false)
   
   return (
-    <div className="border-b border-border last:border-0">
+    <div className="border-b border-[#E5E7EB] last:border-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full py-4 flex items-start justify-between text-left"
+        className="w-full py-4 flex items-start justify-between text-left hover:bg-[#F9FAFB] transition-colors -mx-5 px-5"
       >
-        <span className="font-medium text-foreground pr-4">{question}</span>
+        <span className="font-medium text-[#111827] pr-4">{question}</span>
         {isOpen ? (
-          <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+          <ChevronUp className="w-5 h-5 text-[#6B7280] flex-shrink-0" />
         ) : (
-          <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+          <ChevronDown className="w-5 h-5 text-[#6B7280] flex-shrink-0" />
         )}
       </button>
       {isOpen && (
-        <p className="pb-4 text-sm text-muted-foreground leading-relaxed">
+        <p className="pb-4 text-sm text-[#6B7280] leading-relaxed">
           {answer}
         </p>
       )}
@@ -132,21 +132,21 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 export default function FAQPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#FAFAF9]">
       <div className="max-w-2xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-12">
-          <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
+          <Link href="/" className="inline-flex items-center text-sm text-[#6B7280] hover:text-[#111827] mb-6">
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to Home
           </Link>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <HelpCircle className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 rounded-lg bg-[#6B5FED]/10 flex items-center justify-center">
+              <HelpCircle className="w-5 h-5 text-[#6B5FED]" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground">FAQ</h1>
+            <h1 className="text-3xl font-bold text-[#111827]">FAQ</h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-[#6B7280]">
             Frequently asked questions about SciFlow.
           </p>
         </div>
@@ -155,10 +155,13 @@ export default function FAQPage() {
         <div className="space-y-10">
           {faqs.map((section) => (
             <section key={section.category}>
-              <h2 className="text-lg font-semibold text-foreground mb-4">
+              <h2 className="text-lg font-semibold text-[#111827] mb-4">
                 {section.category}
               </h2>
-              <div className="bg-card border border-border rounded-xl divide-y divide-border px-5">
+              <div 
+                className="bg-white border border-[#E5E7EB] rounded-xl divide-y divide-[#E5E7EB] px-5"
+                style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
+              >
                 {section.questions.map((item, i) => (
                   <FAQItem key={i} question={item.q} answer={item.a} />
                 ))}
@@ -168,17 +171,24 @@ export default function FAQPage() {
         </div>
 
         {/* Footer CTA */}
-        <div className="mt-16 p-8 rounded-xl bg-card border border-border text-center">
-          <h2 className="text-xl font-semibold text-foreground mb-2">Can&apos;t find your answer?</h2>
-          <p className="text-muted-foreground mb-4">
+        <div 
+          className="mt-16 p-8 rounded-xl bg-white border border-[#E5E7EB] text-center"
+          style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
+        >
+          <h2 className="text-xl font-semibold text-[#111827] mb-2">Can&apos;t find your answer?</h2>
+          <p className="text-[#6B7280] mb-4">
             Check our documentation or reach out directly.
           </p>
           <div className="flex justify-center gap-3">
             <Link href="/docs">
-              <Button variant="outline">Read Docs</Button>
+              <Button variant="outline" className="border-[#E5E7EB] text-[#111827] hover:bg-[#F3F4F6] rounded-lg">
+                Read Docs
+              </Button>
             </Link>
             <Link href="/help">
-              <Button>Contact Support</Button>
+              <Button className="bg-[#6B5FED] hover:bg-[#5B4FDD] text-white rounded-lg">
+                Contact Support
+              </Button>
             </Link>
           </div>
         </div>

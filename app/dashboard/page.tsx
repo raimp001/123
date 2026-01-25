@@ -10,21 +10,22 @@ import {
   FlaskConical,
   Wallet,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react"
 import { CreateBountyModal } from "@/components/create-bounty-modal"
 import { useBounties } from "@/hooks/use-bounties"
 import Link from "next/link"
 
 const stateColors: Record<string, string> = {
-  drafting: "bg-slate-100 text-slate-700",
-  funding_escrow: "bg-amber-100 text-amber-700",
-  bidding: "bg-blue-100 text-blue-700",
-  active_research: "bg-emerald-100 text-emerald-700",
-  milestone_review: "bg-orange-100 text-orange-700",
-  dispute_resolution: "bg-red-100 text-red-700",
-  completed: "bg-green-100 text-green-700",
-  cancelled: "bg-slate-100 text-slate-500",
+  drafting: "bg-[#F3F4F6] text-[#6B7280]",
+  funding_escrow: "bg-[#FEF3C7] text-[#92400E]",
+  bidding: "bg-[#DBEAFE] text-[#1E40AF]",
+  active_research: "bg-[#D1FAE5] text-[#065F46]",
+  milestone_review: "bg-[#FFEDD5] text-[#9A3412]",
+  dispute_resolution: "bg-[#FEE2E2] text-[#991B1B]",
+  completed: "bg-[#D1FAE5] text-[#065F46]",
+  cancelled: "bg-[#F3F4F6] text-[#6B7280]",
 }
 
 const stateLabels: Record<string, string> = {
@@ -45,7 +46,7 @@ function formatCurrency(amount: number, currency: string) {
 }
 
 export default function DashboardPage() {
-  const { bounties, isLoading, error } = useBounties({ limit: 6 })
+  const { bounties, isLoading, error, refresh } = useBounties({ limit: 6 })
 
   const stats = {
     active: bounties.filter(b => 
@@ -56,30 +57,38 @@ export default function DashboardPage() {
     disputes: bounties.filter(b => b.current_state === "dispute_resolution").length,
   }
 
+  // Distinguish error vs empty state
+  const hasError = error !== null
+  const isEmpty = !isLoading && !hasError && bounties.length === 0
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manage your research bounties</p>
+          <h1 className="text-2xl font-bold text-[#111827]">Dashboard</h1>
+          <p className="text-sm text-[#6B7280] mt-0.5">Manage your research bounties</p>
         </div>
         <CreateBountyModal />
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Active", value: stats.active, icon: FlaskConical, color: "text-emerald-600" },
-          { label: "Total Value", value: formatCurrency(stats.total, "USD"), icon: Wallet, color: "text-amber-600" },
-          { label: "Labs", value: stats.labs, icon: Users, color: "text-blue-600" },
-          { label: "Disputes", value: stats.disputes, icon: AlertTriangle, color: "text-red-600" },
+          { label: "Active", value: stats.active, icon: FlaskConical, color: "text-[#059669]" },
+          { label: "Total Value", value: formatCurrency(stats.total, "USD"), icon: Wallet, color: "text-[#6B5FED]" },
+          { label: "Labs", value: stats.labs, icon: Users, color: "text-[#2563EB]" },
+          { label: "Disputes", value: stats.disputes, icon: AlertTriangle, color: "text-[#DC2626]" },
         ].map((stat) => (
-          <Card key={stat.label} className="border-slate-200">
+          <Card 
+            key={stat.label} 
+            className="bg-white border-[#E5E7EB] rounded-xl"
+            style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
+          >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-slate-500">{stat.label}</p>
-                <p className="text-xl font-semibold text-slate-900 dark:text-white">{stat.value}</p>
+                <p className="text-xs text-[#6B7280]">{stat.label}</p>
+                <p className="text-xl font-semibold text-[#111827]">{stat.value}</p>
               </div>
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </CardContent>
@@ -89,10 +98,10 @@ export default function DashboardPage() {
 
       {/* Bounties */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium text-slate-900 dark:text-white">Recent Bounties</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-[#111827]">Recent Bounties</h2>
           <Link href="/dashboard/bounties">
-            <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900">
+            <Button variant="ghost" size="sm" className="text-[#6B7280] hover:text-[#111827]">
               View All <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </Link>
@@ -101,7 +110,7 @@ export default function DashboardPage() {
         {isLoading ? (
           <div className="grid gap-3">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="border-slate-200">
+              <Card key={i} className="bg-white border-[#E5E7EB] rounded-xl" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}>
                 <CardContent className="p-4">
                   <Skeleton className="h-5 w-3/4 mb-2" />
                   <Skeleton className="h-4 w-1/4" />
@@ -109,23 +118,38 @@ export default function DashboardPage() {
               </Card>
             ))}
           </div>
-        ) : error ? (
-          <Card className="border-slate-200">
-            <CardContent className="p-8 text-center">
-              <p className="text-slate-500">Unable to load bounties</p>
-              <p className="text-xs text-slate-400 mt-1">Connect Supabase to get started</p>
+        ) : hasError ? (
+          // Error state - technical issue
+          <Card className="bg-white border-[#E5E7EB] rounded-xl" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}>
+            <CardContent className="p-10 text-center">
+              <AlertTriangle className="w-10 h-10 mx-auto text-[#9CA3AF] mb-4" />
+              <p className="font-medium text-[#111827] mb-2">Unable to load bounties</p>
+              <p className="text-sm text-[#6B7280] mb-4 max-w-sm mx-auto">
+                Please check your connection or try again later. 
+                If the problem persists, contact support.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => refresh()}
+                className="border-[#E5E7EB] text-[#111827] hover:bg-[#F3F4F6] rounded-lg"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" /> Retry
+              </Button>
             </CardContent>
           </Card>
-        ) : bounties.length === 0 ? (
-          <Card className="border-slate-200">
-            <CardContent className="p-8 text-center">
-              <FlaskConical className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-600 font-medium">No bounties yet</p>
-              <p className="text-sm text-slate-400 mb-4">Create your first research bounty</p>
+        ) : isEmpty ? (
+          // Empty state - no bounties yet (expected)
+          <Card className="bg-white border-[#E5E7EB] rounded-xl" style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}>
+            <CardContent className="p-10 text-center">
+              <FlaskConical className="w-10 h-10 mx-auto text-[#6B5FED] mb-4" />
+              <p className="font-semibold text-[#111827] mb-2">No bounties yet</p>
+              <p className="text-sm text-[#6B7280] mb-6 max-w-sm mx-auto">
+                Create your first research bounty to get started.
+              </p>
               <CreateBountyModal 
                 trigger={
-                  <Button size="sm" className="bg-slate-900 hover:bg-slate-800">
-                    <Plus className="w-4 h-4 mr-1" /> Create Bounty
+                  <Button className="bg-[#6B5FED] hover:bg-[#5B4FDD] text-white rounded-lg">
+                    <Plus className="w-4 h-4 mr-2" /> Create Bounty
                   </Button>
                 }
               />
@@ -135,17 +159,20 @@ export default function DashboardPage() {
           <div className="grid gap-3">
             {bounties.map((bounty) => (
               <Link key={bounty.id} href={`/dashboard/bounties/${bounty.id}`}>
-                <Card className="border-slate-200 hover:border-slate-300 transition-colors cursor-pointer">
+                <Card 
+                  className="bg-white border-[#E5E7EB] hover:border-[#6B5FED]/30 transition-colors cursor-pointer rounded-xl"
+                  style={{boxShadow: '0 1px 3px rgba(0,0,0,0.08)'}}
+                >
                   <CardContent className="p-4 flex items-center justify-between gap-4">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-slate-900 dark:text-white truncate">
+                      <h3 className="font-medium text-[#111827] truncate">
                         {bounty.title}
                       </h3>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-[#6B7280]">
                         {formatCurrency(bounty.total_budget || 0, bounty.currency || "USD")}
                       </p>
                     </div>
-                    <Badge className={stateColors[bounty.current_state] || stateColors.drafting}>
+                    <Badge className={`${stateColors[bounty.current_state] || stateColors.drafting} border-0`}>
                       {stateLabels[bounty.current_state] || bounty.current_state}
                     </Badge>
                   </CardContent>
@@ -157,15 +184,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Action */}
-      <Card className="bg-slate-900 border-0">
-        <CardContent className="p-5 flex items-center justify-between gap-4">
+      <Card 
+        className="bg-[#6B5FED] border-0 rounded-xl overflow-hidden"
+      >
+        <CardContent className="p-6 flex items-center justify-between gap-4">
           <div>
-            <p className="font-medium text-white">Ready to fund research?</p>
-            <p className="text-sm text-slate-400">Create a bounty and connect with verified labs</p>
+            <p className="font-semibold text-white">Ready to fund research?</p>
+            <p className="text-sm text-white/80">Create a bounty and connect with verified labs</p>
           </div>
           <CreateBountyModal 
             trigger={
-              <Button className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-medium">
+              <Button className="bg-white hover:bg-[#F3F4F6] text-[#6B5FED] font-medium rounded-lg">
                 Create Bounty
               </Button>
             }
