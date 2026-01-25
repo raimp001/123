@@ -147,17 +147,8 @@ export default function WhitepaperPage() {
                     href={`#${section.id}`}
                     onClick={(e) => {
                       e.preventDefault()
-                      const element = document.getElementById(section.id)
-                      if (element) {
-                        // Update state first to highlight TOC item
-                        setActiveSection(section.id)
-                        // Update URL
-                        window.history.pushState(null, "", `#${section.id}`)
-                        // Scroll after a small delay to let React finish re-rendering
-                        setTimeout(() => {
-                          element.scrollIntoView({ behavior: "smooth", block: "start" })
-                        }, 50)
-                      }
+                      // Use location.hash to trigger native browser scroll
+                      window.location.hash = section.id
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer ${
                       activeSection === section.id 
