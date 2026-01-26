@@ -120,33 +120,58 @@ html {
 
   body {
     @apply bg-background text-foreground font-sans;
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: 15px;
+    line-height: 1.7;
+    letter-spacing: -0.01em;
   }
 
   /* Headings - elegant, can use serif for display */
-  h1, h2, h3 {
+  h1 {
     @apply font-serif tracking-tight;
     font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
+
+  h2 {
+    @apply font-serif tracking-tight;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h3 {
+    @apply font-sans font-semibold tracking-tight;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
   }
 
   h4, h5, h6 {
-    @apply font-sans font-medium tracking-tight;
+    @apply font-sans font-medium;
+    letter-spacing: -0.01em;
   }
 
   /* Large display headings with serif */
   .heading-display {
-    @apply font-serif font-normal tracking-tight;
+    @apply font-serif font-normal;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
   }
 
   /* Monospace for technical content */
   code, pre {
     font-family: var(--font-mono), 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9em;
   }
 
   /* Links - subtle, no underline by default */
   a {
-    @apply text-foreground/80 hover:text-foreground transition-colors;
+    @apply text-foreground/80 hover:text-foreground transition-colors duration-200;
+  }
+
+  /* Better paragraph spacing */
+  p {
+    @apply leading-relaxed;
   }
 }
 

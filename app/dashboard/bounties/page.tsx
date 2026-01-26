@@ -65,51 +65,51 @@ export default function BountiesPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-5xl mx-auto space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif text-foreground">Bounties</h1>
-          <p className="text-sm text-muted-foreground">Manage your research bounties</p>
+          <h1 className="text-3xl font-serif text-foreground tracking-tight">Bounties</h1>
+          <p className="text-muted-foreground mt-1">Manage your research bounties</p>
         </div>
         <CreateBountyModal />
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Active", value: counts.active },
-          { label: "Drafts", value: counts.drafts },
-          { label: "Completed", value: counts.completed, color: "text-emerald-400" },
-          { label: "Disputes", value: counts.disputes, color: "text-red-400" },
+          { label: "Active", value: counts.active, icon: "●" },
+          { label: "Drafts", value: counts.drafts, icon: "○" },
+          { label: "Completed", value: counts.completed, color: "text-emerald-400", icon: "✓" },
+          { label: "Disputes", value: counts.disputes, color: "text-red-400", icon: "!" },
         ].map((stat) => (
-          <Card key={stat.label} className="border-border bg-card">
-            <CardContent className="p-3 text-center">
-              <p className={`text-xl font-semibold ${stat.color || "text-foreground"}`}>
+          <Card key={stat.label} className="group hover:border-accent/30 transition-all duration-300">
+            <CardContent className="p-5 text-center">
+              <p className={`text-3xl font-semibold tracking-tight ${stat.color || "text-foreground"}`}>
                 {stat.value}
               </p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
+              <p className="text-sm text-muted-foreground mt-1 font-medium">{stat.label}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
+      <div className="flex gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input
             placeholder="Search bounties..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-secondary border-border text-foreground"
+            className="pl-11"
           />
         </div>
         <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-[160px] bg-secondary border-border text-foreground">
-            <SelectValue placeholder="Filter" />
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
-          <SelectContent className="bg-card text-foreground border-border">
+          <SelectContent className="bg-card border-border">
             <SelectItem value="all">All States</SelectItem>
             <SelectItem value="drafting">Draft</SelectItem>
             <SelectItem value="funding_escrow">Funding</SelectItem>
@@ -124,42 +124,49 @@ export default function BountiesPage() {
 
       {/* List */}
       {isLoading ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="border-border bg-card">
-              <CardContent className="p-4 flex items-center gap-4">
-                <Skeleton className="w-10 h-10 rounded-lg bg-secondary" />
+            <Card key={i}>
+              <CardContent className="p-5 flex items-center gap-5">
+                <Skeleton className="w-12 h-12 rounded-xl bg-secondary/50" />
                 <div className="flex-1">
-                  <Skeleton className="h-5 w-2/3 mb-2 bg-secondary" />
-                  <Skeleton className="h-4 w-1/4 bg-secondary" />
+                  <Skeleton className="h-5 w-3/4 mb-3 bg-secondary/50" />
+                  <Skeleton className="h-4 w-1/3 bg-secondary/50" />
                 </div>
-                <Skeleton className="h-6 w-16 rounded-full bg-secondary" />
+                <Skeleton className="h-7 w-20 rounded-lg bg-secondary/50" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : error ? (
-        <Card className="border-border bg-card">
-          <CardContent className="p-10 text-center">
-            <p className="text-muted-foreground">Unable to load bounties</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">Please configure Supabase environment variables</p>
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-5">
+              <FlaskConical className="w-7 h-7 text-muted-foreground" />
+            </div>
+            <p className="text-lg font-medium text-foreground">Unable to load bounties</p>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
+              Please check your connection or configure Supabase environment variables
+            </p>
           </CardContent>
         </Card>
       ) : bounties.length === 0 ? (
-        <Card className="border-border bg-card">
-          <CardContent className="p-10 text-center">
-            <FlaskConical className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-            <p className="font-medium text-foreground">
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-6">
+              <FlaskConical className="w-8 h-8 text-accent" />
+            </div>
+            <p className="text-xl font-medium text-foreground">
               {search ? "No bounties match your search" : "No bounties yet"}
             </p>
-            <p className="text-sm text-muted-foreground mt-1 mb-4">
-              {search ? "Try different keywords" : "Create your first research bounty to get started"}
+            <p className="text-muted-foreground mt-2 mb-6 max-w-sm mx-auto">
+              {search ? "Try different keywords or clear your search" : "Create your first research bounty to start funding breakthrough science"}
             </p>
             {!search && (
               <CreateBountyModal 
                 trigger={
-                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
-                    <Plus className="w-4 h-4 mr-1" /> Create Bounty
+                  <Button size="lg">
+                    <Plus className="w-4 h-4 mr-2" /> Create Your First Bounty
                   </Button>
                 }
               />
@@ -167,29 +174,31 @@ export default function BountiesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {bounties.map((bounty) => (
             <Link key={bounty.id} href={`/dashboard/bounties/${bounty.id}`}>
-              <Card className="border-border bg-card hover:border-accent/50 transition-colors group cursor-pointer">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                    <FlaskConical className="w-5 h-5 text-muted-foreground" />
+              <Card className="hover:border-accent/40 hover:shadow-lg hover:shadow-accent/5 group cursor-pointer">
+                <CardContent className="p-5 flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-xl bg-secondary/50 flex items-center justify-center group-hover:bg-accent/10 transition-colors duration-300">
+                    <FlaskConical className="w-6 h-6 text-muted-foreground group-hover:text-accent transition-colors duration-300" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground truncate group-hover:text-accent transition-colors">
+                    <h3 className="font-medium text-foreground text-base truncate group-hover:text-accent transition-colors duration-200">
                       {bounty.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {formatCurrency(bounty.total_budget || 0, bounty.currency || "USD")}
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      <span className="font-medium text-foreground/80">{formatCurrency(bounty.total_budget || 0, bounty.currency || "USD")}</span>
                       {bounty.selected_lab && (
-                        <span className="ml-2">• {bounty.selected_lab.name}</span>
+                        <span className="ml-2 text-muted-foreground">• {bounty.selected_lab.name}</span>
                       )}
                     </p>
                   </div>
                   <Badge className={stateColors[bounty.current_state] || stateColors.drafting}>
                     {stateLabels[bounty.current_state] || bounty.current_state}
                   </Badge>
-                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
+                  <div className="w-8 h-8 rounded-lg bg-transparent group-hover:bg-secondary/50 flex items-center justify-center transition-colors duration-200">
+                    <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors duration-200" />
+                  </div>
                 </CardContent>
               </Card>
             </Link>
@@ -199,7 +208,7 @@ export default function BountiesPage() {
 
       {/* Pagination info */}
       {pagination.total > 0 && (
-        <p className="text-xs text-center text-muted-foreground">
+        <p className="text-sm text-center text-muted-foreground pt-4">
           Showing {bounties.length} of {pagination.total} bounties
         </p>
       )}

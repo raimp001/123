@@ -1,30 +1,77 @@
-# Stock market dashboard
+# SciFlow - DeSci Research Bounty Platform
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A decentralized science (DeSci) platform connecting research funders with verified labs through bounties, milestones, and crypto-enabled payments.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/manoj-rs-projects-36521afd/v0-stock-market-dashboard)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/teQXwnqoIk2)
+## Features
 
-## Overview
+- **Research Bounties** - Create and manage research bounties with milestone-based payouts
+- **Lab Verification** - Tiered verification system (Basic, Verified, Trusted, Institutional)
+- **Proposal System** - Labs submit proposals to compete for bounties
+- **Milestone Tracking** - Track research progress with deliverables and verification
+- **Multi-Currency Payments** - Support for USD (Stripe), Solana USDC, and Base USDC
+- **Escrow System** - Secure fund management with milestone-based releases
+- **Dispute Resolution** - Built-in arbitration for research disputes
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Tech Stack
 
-## Deployment
+- **Framework**: Next.js 14 (App Router)
+- **Database**: Supabase (PostgreSQL with Row Level Security)
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Payments**: Stripe, Solana, Base (via Coinbase CDP SDK)
+- **State Management**: XState for bounty lifecycle
 
-Your project is live at:
+## Quick Start
 
-**[https://vercel.com/manoj-rs-projects-36521afd/v0-stock-market-dashboard](https://vercel.com/manoj-rs-projects-36521afd/v0-stock-market-dashboard)**
+1. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-## Build your app
+2. **Configure environment**
+   - Copy `.env.local` and fill in your credentials
+   - At minimum, you need Supabase credentials
 
-Continue building your app on:
+3. **Set up Supabase**
+   - Create a project at [supabase.com](https://supabase.com)
+   - Run the migration in `lib/db/migrations/001_initial_schema.sql`
+   - Add your Supabase URL and keys to `.env.local`
 
-**[https://v0.dev/chat/projects/teQXwnqoIk2](https://v0.dev/chat/projects/teQXwnqoIk2)**
+4. **Run development server**
+   ```bash
+   pnpm dev
+   ```
 
-## How It Works
+5. **Open the app**
+   - Navigate to [http://localhost:3000](http://localhost:3000)
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+## Environment Variables
+
+Required for basic functionality:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+See `docs/SETUP.md` for complete setup instructions including payment providers.
+
+## Project Structure
+
+```
+├── app/                    # Next.js App Router pages
+│   ├── api/               # API routes
+│   ├── dashboard/         # Main application pages
+│   └── (auth)/           # Authentication pages
+├── components/            # React components
+├── hooks/                 # Custom React hooks
+├── lib/                   # Utilities and configurations
+│   ├── db/               # Database schema and migrations
+│   ├── machines/         # XState state machines
+│   ├── payments/         # Payment provider integrations
+│   └── supabase/         # Supabase client configuration
+└── types/                 # TypeScript type definitions
+```
+
+## License
+
+MIT
