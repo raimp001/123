@@ -170,25 +170,120 @@ export class BaseCDPPaymentService {
     }
 
     try {
-      // In production with CDP SDK or ethers:
-      // 1. Get transaction receipt
-      // 2. Parse Transfer event from USDC contract
-      // 3. Verify amount and recipient
+      // Validate transaction hash format
+      if (!txHash || !txHash.startsWith('0x') || txHash.length !== 66) {
+        return { success: false, error: 'Invalid transaction hash format' }
+      }
 
-      if (!txHash || !txHash.startsWith('0x')) {
-        return { success: false, error: 'Invalid transaction hash' }
+      // Fetch transaction receipt via RPC
+      const receipt = await this.fetchTransactionReceipt(txHash)
+
+      if (!receipt) {
+        return { success: false, error: 'Transaction not found on-chain' }
+      }
+
+      // Check if transaction was successful (status: 0x1)
+      if (receipt.status !== '0x1') {
+        return { success: false, error: 'Transaction failed on-chain' }
+      }
+
+      // Parse Transfer events from the receipt logs
+      const transferEvent = this.parseUSDCTransferEvent(receipt.logs)
+
+      if (!transferEvent) {
+        return { success: false, error: 'No USDC transfer found in transaction' }
+      }
+
+      // Verify destination is our platform wallet
+      if (transferEvent.to.toLowerCase() !== this.config.platformWallet.toLowerCase()) {
+        return { success: false, error: 'Transfer destination does not match platform wallet' }
+      }
+
+      // Verify amount (with 1% tolerance)
+      const expectedInWei = BigInt(Math.round(expectedAmount * 1_000_000))
+      const tolerance = expectedInWei / 100n
+      if (transferEvent.amount < expectedInWei - tolerance) {
+        return {
+          success: false,
+          error: `Transfer amount is less than expected`,
+        }
       }
 
       return {
         success: true,
         txHash,
+        blockNumber: parseInt(receipt.blockNumber, 16),
       }
     } catch (error) {
+      console.error('[Base] Verification error:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to verify deposit',
       }
     }
+  }
+
+  /**
+   * Fetch transaction receipt via JSON-RPC
+   */
+  private async fetchTransactionReceipt(txHash: string): Promise<{
+    status: string
+    blockNumber: string
+    logs: Array<{
+      address: string
+      topics: string[]
+      data: string
+    }>
+  } | null> {
+    try {
+      const response = await fetch(this.networkConfig.rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_getTransactionReceipt',
+          params: [txHash],
+        }),
+      })
+
+      const result = await response.json()
+      return result.result
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Parse USDC Transfer event from transaction logs
+   * Transfer event signature: Transfer(address,address,uint256)
+   * Topic0: 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+   */
+  private parseUSDCTransferEvent(
+    logs: Array<{ address: string; topics: string[]; data: string }>
+  ): { from: string; to: string; amount: bigint } | null {
+    const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+
+    for (const log of logs) {
+      // Check if this is a USDC contract event
+      if (log.address.toLowerCase() !== this.config.usdcContractAddress.toLowerCase()) {
+        continue
+      }
+
+      // Check if this is a Transfer event
+      if (log.topics[0] !== TRANSFER_TOPIC) {
+        continue
+      }
+
+      // Parse Transfer event (indexed: from, to; data: amount)
+      const from = '0x' + log.topics[1].slice(26)
+      const to = '0x' + log.topics[2].slice(26)
+      const amount = BigInt(log.data)
+
+      return { from, to, amount }
+    }
+
+    return null
   }
 
   /**

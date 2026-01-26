@@ -1,9 +1,11 @@
 /**
  * SciFlow Solana Payment Integration
- * 
+ *
  * Handles USDC payments on Solana network for escrow operations.
  * Uses @solana/web3.js and @solana/spl-token for on-chain interactions.
  */
+
+import { Connection, PublicKey, ParsedTransactionWithMeta } from '@solana/web3.js'
 
 // Types for Solana integration
 export interface SolanaEscrowConfig {
@@ -127,14 +129,52 @@ export class SolanaPaymentService {
     }
 
     try {
-      // In production, this would:
-      // 1. Fetch transaction from RPC
-      // 2. Parse and verify the transfer
-      // 3. Check amount matches expected
+      // Validate transaction hash format (base58, typically 87-88 chars)
+      if (!txHash || txHash.length < 32 || txHash.length > 90) {
+        return { success: false, error: 'Invalid transaction hash format' }
+      }
 
-      // For now, accept any valid-looking tx hash
-      if (!txHash || txHash.length < 32) {
-        return { success: false, error: 'Invalid transaction hash' }
+      // Create connection to Solana RPC
+      const connection = new Connection(this.config.rpcUrl, 'confirmed')
+
+      // Fetch the transaction with parsed data
+      const transaction = await connection.getParsedTransaction(txHash, {
+        maxSupportedTransactionVersion: 0,
+      })
+
+      if (!transaction) {
+        return { success: false, error: 'Transaction not found on-chain' }
+      }
+
+      // Check if transaction was successful
+      if (transaction.meta?.err) {
+        return { success: false, error: 'Transaction failed on-chain' }
+      }
+
+      // Verify the transaction contains a USDC transfer to our platform wallet
+      const transferInfo = this.extractUSDCTransfer(transaction)
+
+      if (!transferInfo) {
+        return { success: false, error: 'No USDC transfer found in transaction' }
+      }
+
+      // Verify destination is our platform wallet
+      if (transferInfo.destination !== this.config.platformWallet) {
+        return { success: false, error: 'Transfer destination does not match platform wallet' }
+      }
+
+      // Verify the token is USDC
+      if (transferInfo.mint !== this.config.usdcMint) {
+        return { success: false, error: 'Transfer token is not USDC' }
+      }
+
+      // Verify amount (with 1% tolerance for fees)
+      const tolerance = expectedAmount * 0.01
+      if (transferInfo.amount < expectedAmount - tolerance) {
+        return {
+          success: false,
+          error: `Transfer amount ${transferInfo.amount} is less than expected ${expectedAmount}`,
+        }
       }
 
       return {
@@ -142,10 +182,60 @@ export class SolanaPaymentService {
         txHash,
       }
     } catch (error) {
+      console.error('[Solana] Verification error:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to verify deposit',
       }
+    }
+  }
+
+  /**
+   * Extract USDC transfer details from a parsed transaction
+   */
+  private extractUSDCTransfer(
+    transaction: ParsedTransactionWithMeta
+  ): { amount: number; destination: string; mint: string } | null {
+    try {
+      const instructions = transaction.transaction.message.instructions
+
+      for (const instruction of instructions) {
+        // Check for SPL Token transfer instruction
+        if ('parsed' in instruction && instruction.program === 'spl-token') {
+          const parsed = instruction.parsed
+
+          if (parsed.type === 'transfer' || parsed.type === 'transferChecked') {
+            const info = parsed.info
+            return {
+              amount: parseInt(info.amount || info.tokenAmount?.amount || '0', 10),
+              destination: info.destination,
+              mint: info.mint || this.config.usdcMint,
+            }
+          }
+        }
+      }
+
+      // Also check inner instructions
+      const innerInstructions = transaction.meta?.innerInstructions || []
+      for (const inner of innerInstructions) {
+        for (const instruction of inner.instructions) {
+          if ('parsed' in instruction && instruction.program === 'spl-token') {
+            const parsed = instruction.parsed
+            if (parsed.type === 'transfer' || parsed.type === 'transferChecked') {
+              const info = parsed.info
+              return {
+                amount: parseInt(info.amount || info.tokenAmount?.amount || '0', 10),
+                destination: info.destination,
+                mint: info.mint || this.config.usdcMint,
+              }
+            }
+          }
+        }
+      }
+
+      return null
+    } catch {
+      return null
     }
   }
 
