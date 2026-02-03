@@ -74,8 +74,14 @@ export function Providers({ children }: ProvidersProps) {
               connectionOptions: 'smartWalletOnly',
             },
           },
+          // Mini app / frame support
           fundingMethodConfig: {
             moonpay: { useSandbox: true },
+          },
+          // Farcaster frame support
+          farcaster: {
+            // Enable Farcaster login as auth method in frames
+            enableClientAuth: true,
           },
         }}
       >
@@ -120,6 +126,7 @@ function FrameAutoConnect({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initFrame = async () => {
       try {
+        // Dynamic import to avoid issues on server
         const { default: sdk } = await import('@farcaster/frame-sdk')
         const context = await sdk.context
 
@@ -168,8 +175,8 @@ function FrameAutoConnect({ children }: { children: ReactNode }) {
             }
           }
         }
-      } catch (err) {
-        // Not in a frame context
+      } catch {
+        // Not in a frame context - this is fine
         console.log('Not in frame context')
       }
     }
