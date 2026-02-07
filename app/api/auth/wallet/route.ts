@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createHash, randomBytes } from 'crypto'
+import type { Database } from '@/types/database'
+
+type UserInsert = Database['public']['Tables']['users']['Insert']
+type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
 
 // Wallet-based authentication for Solana and EVM wallets
 
@@ -37,11 +41,12 @@ export async function POST(request: NextRequest) {
     const walletHash = createHash('sha256').update(address.toLowerCase()).digest('hex').slice(0, 8)
     const email = `wallet_${walletHash}@sciflow.local`
 
-    // Check if user exists
+    // Check if user exists (check both wallet columns based on provider)
+    const walletColumn = provider === 'evm' ? 'wallet_address_evm' : 'wallet_address_solana'
     const { data: existingUser } = await supabase
       .from('users')
       .select('id, email')
-      .eq('wallet_address', address.toLowerCase())
+      .eq(walletColumn, address.toLowerCase())
       .single()
 
     let userId: string
@@ -78,24 +83,26 @@ export async function POST(request: NextRequest) {
       userId = newUser.user.id
 
       // Create user profile
-      await supabase.from('users').insert({
+      const userProfile: UserInsert = {
         id: userId,
         email,
         wallet_address_evm: provider === 'evm' ? address.toLowerCase() : null,
         wallet_address_solana: provider === 'solana' ? address.toLowerCase() : null,
         role: 'funder', // Default role, can be changed later
-      } as Record<string, unknown>)
+      }
+      await supabase.from('users').insert(userProfile)
     }
 
     // Log the authentication
-    await supabase.from('activity_logs').insert({
+    const activityLog: ActivityLogInsert = {
       user_id: userId,
       action: 'wallet_auth',
       details: {
         provider,
         wallet_address: address,
       },
-    } as Record<string, unknown>)
+    }
+    await supabase.from('activity_logs').insert(activityLog)
 
     return NextResponse.json({
       email,

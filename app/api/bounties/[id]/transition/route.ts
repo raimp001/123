@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import type { Database } from '@/types/database'
+
+type BountyUpdate = Database['public']['Tables']['bounties']['Update']
+type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
+type MilestoneUpdate = Database['public']['Tables']['milestones']['Update']
+type ProposalUpdate = Database['public']['Tables']['proposals']['Update']
+type StakingTransactionInsert = Database['public']['Tables']['staking_transactions']['Insert']
+type EscrowReleaseInsert = Database['public']['Tables']['escrow_releases']['Insert']
+type DisputeInsert = Database['public']['Tables']['disputes']['Insert']
+type DisputeUpdate = Database['public']['Tables']['disputes']['Update']
+type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
 
 /**
  * State Machine Transition Rules
@@ -225,7 +236,7 @@ export async function POST(
     }
 
     // Build update object
-    const updates: Record<string, unknown> = {
+    const updates: BountyUpdate = {
       state: targetState,
       updated_at: new Date().toISOString(),
     }
@@ -236,7 +247,7 @@ export async function POST(
     }
     if (event === 'SELECT_LAB') {
       updates.started_at = new Date().toISOString()
-      updates.selected_lab_id = eventData?.labId
+      updates.selected_lab_id = eventData?.labId as string
     }
     if (targetState === 'completed' || targetState === 'completed_payout') {
       updates.completed_at = new Date().toISOString()
@@ -258,7 +269,7 @@ export async function POST(
     await handleTransitionSideEffects(supabase, bountyData, event, eventData, user.id)
 
     // Log activity
-    await supabase.from('activity_logs').insert({
+    const activityLog: ActivityLogInsert = {
       user_id: user.id,
       bounty_id: id,
       action: `state_transition:${event}`,
@@ -267,7 +278,8 @@ export async function POST(
         to_state: targetState,
         event_data: eventData,
       },
-    } as Record<string, unknown>)
+    }
+    await supabase.from('activity_logs').insert(activityLog)
 
     // Send notifications
     await sendTransitionNotifications(supabase, bountyData, event, targetState, user.id)
@@ -295,37 +307,41 @@ async function handleTransitionSideEffects(
     case 'SELECT_LAB':
       // Update proposal status
       if (eventData?.proposalId) {
+        const acceptUpdate: ProposalUpdate = { status: 'accepted' }
         await supabase
           .from('proposals')
-          .update({ status: 'accepted' })
+          .update(acceptUpdate)
           .eq('id', eventData.proposalId)
 
         // Reject other proposals
+        const rejectUpdate: ProposalUpdate = { status: 'rejected' }
         await supabase
           .from('proposals')
-          .update({ status: 'rejected' })
+          .update(rejectUpdate)
           .eq('bounty_id', bounty.id)
           .neq('id', eventData.proposalId)
 
         // Lock stake for accepted lab
         const proposal = bounty.proposals.find(p => p.id === eventData.proposalId)
         if (proposal) {
-          await supabase.from('staking_transactions').insert({
+          const stakingTx: StakingTransactionInsert = {
             lab_id: proposal.lab_id,
             bounty_id: bounty.id,
             type: 'lock',
             amount: proposal.staked_amount,
             balance_after: 0, // Will be calculated by trigger
-          })
+          }
+          await supabase.from('staking_transactions').insert(stakingTx)
         }
       }
 
       // Set first milestone to in_progress
       const firstMilestone = bounty.milestones.find(m => m.sequence === 1)
       if (firstMilestone) {
+        const milestoneUpdate: MilestoneUpdate = { status: 'in_progress' }
         await supabase
           .from('milestones')
-          .update({ status: 'in_progress' })
+          .update(milestoneUpdate)
           .eq('id', firstMilestone.id)
       }
       break
@@ -333,37 +349,41 @@ async function handleTransitionSideEffects(
     case 'APPROVE_MILESTONE':
       if (eventData?.milestoneId) {
         // Update milestone status
+        const verifyUpdate: MilestoneUpdate = {
+          status: 'verified',
+          verified_at: new Date().toISOString(),
+        }
         await supabase
           .from('milestones')
-          .update({ 
-            status: 'verified',
-            verified_at: new Date().toISOString(),
-          })
+          .update(verifyUpdate)
           .eq('id', eventData.milestoneId)
 
         // Get milestone to calculate payout
-        const { data: milestone } = await supabase
+        const { data: milestoneData } = await supabase
           .from('milestones')
           .select('*, bounty:bounties(total_budget)')
           .eq('id', eventData.milestoneId)
           .single()
 
-        if (milestone) {
-          const payoutAmount = (milestone.payout_percentage / 100) * (milestone.bounty as { total_budget: number }).total_budget
+        if (milestoneData) {
+          const milestone = milestoneData as { payout_percentage: number; sequence: number; bounty: { total_budget: number } | null }
+          const payoutAmount = (milestone.payout_percentage / 100) * (milestone.bounty?.total_budget || 0)
 
           // Create escrow release
-          const { data: escrow } = await supabase
+          const { data: escrowData } = await supabase
             .from('escrows')
             .select('id')
             .eq('bounty_id', bounty.id)
             .single()
 
-          if (escrow) {
-            await supabase.from('escrow_releases').insert({
+          if (escrowData) {
+            const escrow = escrowData as { id: string }
+            const escrowRelease: EscrowReleaseInsert = {
               escrow_id: escrow.id,
               milestone_id: eventData.milestoneId as string,
               amount: payoutAmount,
-            })
+            }
+            await supabase.from('escrow_releases').insert(escrowRelease)
 
             // Update escrow released amount using RPC function for atomic increment
             await supabase.rpc('increment_escrow_released', {
@@ -375,9 +395,10 @@ async function handleTransitionSideEffects(
           // Set next milestone to in_progress
           const nextMilestone = bounty.milestones.find(m => m.sequence === milestone.sequence + 1)
           if (nextMilestone) {
+            const nextMilestoneUpdate: MilestoneUpdate = { status: 'in_progress' }
             await supabase
               .from('milestones')
-              .update({ status: 'in_progress' })
+              .update(nextMilestoneUpdate)
               .eq('id', nextMilestone.id)
           }
         }
@@ -386,40 +407,43 @@ async function handleTransitionSideEffects(
 
     case 'INITIATE_DISPUTE':
       if (eventData) {
-        await supabase.from('disputes').insert({
+        const dispute: DisputeInsert = {
           bounty_id: bounty.id,
           initiated_by: userId,
-          reason: eventData.reason as string,
+          reason: eventData.reason as 'data_falsification' | 'protocol_deviation' | 'sample_tampering' | 'timeline_breach' | 'quality_failure' | 'communication_failure',
           description: eventData.description as string,
-          evidence_links: eventData.evidenceLinks as string[] || [],
-        })
+          evidence_links: (eventData.evidenceLinks as string[]) || [],
+        }
+        await supabase.from('disputes').insert(dispute)
       }
       break
 
     case 'RESOLVE_DISPUTE':
       if (eventData) {
+        const disputeUpdate: DisputeUpdate = {
+          status: 'resolved',
+          resolution: eventData.resolution as 'funder_wins' | 'lab_wins' | 'partial_refund',
+          slash_amount: eventData.slashAmount as number,
+          resolved_at: new Date().toISOString(),
+        }
         await supabase
           .from('disputes')
-          .update({
-            status: 'resolved',
-            resolution: eventData.resolution as string,
-            slash_amount: eventData.slashAmount as number,
-            resolved_at: new Date().toISOString(),
-          })
+          .update(disputeUpdate)
           .eq('bounty_id', bounty.id)
           .eq('status', 'open')
 
         // Handle stake slashing if funder wins
         if (eventData.resolution === 'funder_wins' && eventData.slashAmount) {
-          const proposal = bounty.proposals.find(p => p.status === 'accepted')
-          if (proposal) {
-            await supabase.from('staking_transactions').insert({
-              lab_id: proposal.lab_id,
+          const acceptedProposal = bounty.proposals.find(p => p.status === 'accepted')
+          if (acceptedProposal) {
+            const slashTx: StakingTransactionInsert = {
+              lab_id: acceptedProposal.lab_id,
               bounty_id: bounty.id,
               type: 'slash',
               amount: eventData.slashAmount as number,
               balance_after: 0,
-            })
+            }
+            await supabase.from('staking_transactions').insert(slashTx)
           }
         }
       }
@@ -434,13 +458,7 @@ async function sendTransitionNotifications(
   newState: string,
   actorId: string
 ) {
-  const notifications: Array<{
-    user_id: string
-    type: string
-    title: string
-    message: string
-    data: Record<string, unknown>
-  }> = []
+  const notifications: NotificationInsert[] = []
 
   switch (event) {
     case 'SELECT_LAB':
@@ -490,8 +508,8 @@ async function sendTransitionNotifications(
       break
 
     case 'INITIATE_DISPUTE':
-      const disputeTarget = actorId === bounty.funder_id 
-        ? bounty.selected_lab?.user_id 
+      const disputeTarget = actorId === bounty.funder_id
+        ? bounty.selected_lab?.user_id
         : bounty.funder_id
       if (disputeTarget) {
         notifications.push({
@@ -506,12 +524,6 @@ async function sendTransitionNotifications(
   }
 
   if (notifications.length > 0) {
-    await supabase.from('notifications').insert(notifications as Array<{
-      user_id: string
-      type: 'bounty_update' | 'proposal_received' | 'proposal_accepted' | 'milestone_submitted' | 'milestone_approved' | 'milestone_rejected' | 'dispute_opened' | 'dispute_resolved' | 'payment_received' | 'system'
-      title: string
-      message: string
-      data: Record<string, unknown>
-    }>)
+    await supabase.from('notifications').insert(notifications)
   }
 }
