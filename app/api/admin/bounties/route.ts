@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!userData || userData.role !== 'admin') {
+    const userRole = (userData as { role: string } | null)?.role
+    if (!userRole || userRole !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (stats) {
-      stats.forEach(b => {
+      (stats as Array<{ state: string }>).forEach(b => {
         if (b.state === 'drafting') stateCounts.pending_review++
         else if (b.state === 'seeking_proposals') stateCounts.seeking_proposals++
         else if (b.state === 'active_research' || b.state === 'milestone_review') stateCounts.active_research++
