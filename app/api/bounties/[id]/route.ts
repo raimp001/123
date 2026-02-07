@@ -67,18 +67,20 @@ export async function PATCH(
       .eq('id', id)
       .single()
 
-    if (fetchError) {
+    if (fetchError || !currentBounty) {
       return NextResponse.json({ error: 'Bounty not found' }, { status: 404 })
     }
 
+    const bountyData = currentBounty as { funder_id: string; state: string }
+
     // Verify ownership
-    if (currentBounty.funder_id !== user.id) {
+    if (bountyData.funder_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Only allow updates in drafting state (with some exceptions)
     const allowedStates = ['drafting', 'ready_for_funding']
-    if (!allowedStates.includes(currentBounty.state)) {
+    if (!allowedStates.includes(bountyData.state)) {
       return NextResponse.json(
         { error: 'Cannot update bounty in current state' },
         { status: 400 }
@@ -93,7 +95,7 @@ export async function PATCH(
       .update({
         ...body,
         updated_at: new Date().toISOString(),
-      })
+      } as Record<string, unknown>)
       .eq('id', id)
       .select()
       .single()
@@ -108,7 +110,7 @@ export async function PATCH(
       bounty_id: id,
       action: 'bounty_updated',
       details: { changes: Object.keys(body) },
-    })
+    } as Record<string, unknown>)
 
     return NextResponse.json(updatedBounty)
   } catch (error) {
@@ -138,15 +140,17 @@ export async function DELETE(
       .eq('id', id)
       .single()
 
-    if (fetchError) {
+    if (fetchError || !bounty) {
       return NextResponse.json({ error: 'Bounty not found' }, { status: 404 })
     }
 
-    if (bounty.funder_id !== user.id) {
+    const deleteBountyData = bounty as { funder_id: string; state: string }
+
+    if (deleteBountyData.funder_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    if (bounty.state !== 'drafting') {
+    if (deleteBountyData.state !== 'drafting') {
       return NextResponse.json(
         { error: 'Can only delete bounties in draft state' },
         { status: 400 }

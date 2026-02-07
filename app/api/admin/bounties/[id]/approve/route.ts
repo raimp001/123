@@ -7,6 +7,15 @@ const approvalSchema = z.object({
   reason: z.string().optional(),
 })
 
+interface BountyData {
+  id: string
+  title: string
+  state: string
+  state_history: Array<{ state: string; timestamp: string; by: string }>
+  funder_id: string
+  funder: { id: string; email: string; full_name: string | null } | null
+}
+
 // POST /api/admin/bounties/[id]/approve - Approve or reject a bounty
 export async function POST(
   request: NextRequest,
@@ -29,7 +38,8 @@ export async function POST(
       .eq('id', user.id)
       .single()
 
-    if (!userData || userData.role !== 'admin') {
+    const userRole = (userData as { role: string } | null)?.role
+    if (!userRole || userRole !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
@@ -47,15 +57,17 @@ export async function POST(
     const { action, reason } = validationResult.data
 
     // Get the bounty
-    const { data: bounty, error: bountyError } = await supabase
+    const { data: bountyData, error: bountyError } = await supabase
       .from('bounties')
       .select('*, funder:users!funder_id(id, email, full_name)')
       .eq('id', bountyId)
       .single()
 
-    if (bountyError || !bounty) {
+    if (bountyError || !bountyData) {
       return NextResponse.json({ error: 'Bounty not found' }, { status: 404 })
     }
+
+    const bounty = bountyData as unknown as BountyData
 
     // Only allow approval of bounties in drafting state
     if (bounty.state !== 'drafting') {
@@ -67,7 +79,7 @@ export async function POST(
 
     const newState = action === 'approve' ? 'seeking_proposals' : 'cancelled'
     const newStateHistory = [
-      ...(bounty.state_history as Array<{ state: string; timestamp: string; by: string }>),
+      ...bounty.state_history,
       {
         state: newState,
         timestamp: new Date().toISOString(),
@@ -83,7 +95,7 @@ export async function POST(
       .update({
         state: newState,
         state_history: newStateHistory,
-      })
+      } as Record<string, unknown>)
       .eq('id', bountyId)
       .select()
       .single()
@@ -103,7 +115,7 @@ export async function POST(
 
     await supabase.from('notifications').insert({
       user_id: bounty.funder_id,
-      type: 'bounty_update',
+      type: 'bounty_update' as const,
       title: notificationTitle,
       message: notificationMessage,
       data: {
@@ -111,7 +123,7 @@ export async function POST(
         action: action,
         reason: reason || null,
       },
-    })
+    } as Record<string, unknown>)
 
     // Log activity
     await supabase.from('activity_logs').insert({
@@ -123,7 +135,7 @@ export async function POST(
         reason: reason || null,
         new_state: newState,
       },
-    })
+    } as Record<string, unknown>)
 
     return NextResponse.json({
       success: true,

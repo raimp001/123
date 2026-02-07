@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       // User exists, generate temp password for session
-      userId = existingUser.id
+      userId = (existingUser as { id: string }).id
       tempPassword = randomBytes(32).toString('hex')
 
       // Update password for this session
@@ -81,21 +81,21 @@ export async function POST(request: NextRequest) {
       await supabase.from('users').insert({
         id: userId,
         email,
-        wallet_address: address.toLowerCase(),
-        wallet_provider: provider,
+        wallet_address_evm: provider === 'evm' ? address.toLowerCase() : null,
+        wallet_address_solana: provider === 'solana' ? address.toLowerCase() : null,
         role: 'funder', // Default role, can be changed later
-      })
+      } as Record<string, unknown>)
     }
 
     // Log the authentication
     await supabase.from('activity_logs').insert({
       user_id: userId,
       action: 'wallet_auth',
-      details: { 
+      details: {
         provider,
         wallet_address: address,
       },
-    })
+    } as Record<string, unknown>)
 
     return NextResponse.json({
       email,

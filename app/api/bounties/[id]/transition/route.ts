@@ -116,7 +116,7 @@ export async function POST(
       .eq('id', user.id)
       .single()
 
-    const userRole = dbUser?.role || 'funder'
+    const userRole = (dbUser as { role: string } | null)?.role || 'funder'
 
     // Parse request
     const body = await request.json()
@@ -144,11 +144,24 @@ export async function POST(
       .eq('id', id)
       .single()
 
-    if (fetchError) {
+    if (fetchError || !bounty) {
       return NextResponse.json({ error: 'Bounty not found' }, { status: 404 })
     }
 
-    const currentState = bounty.state
+    // Type assertion for bounty data
+    const bountyData = bounty as unknown as {
+      id: string
+      state: string
+      funder_id: string
+      title: string
+      total_budget: number
+      milestones: Array<{ id: string; sequence: number; status: string; payout_percentage: number }>
+      proposals: Array<{ id: string; lab_id: string; staked_amount: number; status: string }>
+      selected_lab: { user_id: string } | null
+      escrow: unknown
+    }
+
+    const currentState = bountyData.state
     const transition = stateTransitions[currentState]
 
     if (!transition) {
@@ -170,8 +183,8 @@ export async function POST(
     }
 
     // Check permissions
-    const isOwner = bounty.funder_id === user.id
-    const isAssignedLab = bounty.selected_lab?.user_id === user.id
+    const isOwner = bountyData.funder_id === user.id
+    const isAssignedLab = bountyData.selected_lab?.user_id === user.id
     
     let hasPermission = false
     if (transition.permissions.includes('funder') && isOwner) hasPermission = true
@@ -191,8 +204,8 @@ export async function POST(
 
     // Special logic for certain events
     if (event === 'APPROVE_MILESTONE') {
-      const completedMilestones = bounty.milestones.filter((m: { status: string }) => m.status === 'verified').length
-      if (completedMilestones + 1 >= bounty.milestones.length) {
+      const completedMilestones = bountyData.milestones.filter(m => m.status === 'verified').length
+      if (completedMilestones + 1 >= bountyData.milestones.length) {
         targetState = 'completed_payout'
       }
     }
@@ -242,7 +255,7 @@ export async function POST(
     }
 
     // Handle side effects
-    await handleTransitionSideEffects(supabase, bounty, event, eventData, user.id)
+    await handleTransitionSideEffects(supabase, bountyData, event, eventData, user.id)
 
     // Log activity
     await supabase.from('activity_logs').insert({
@@ -254,10 +267,10 @@ export async function POST(
         to_state: targetState,
         event_data: eventData,
       },
-    })
+    } as Record<string, unknown>)
 
     // Send notifications
-    await sendTransitionNotifications(supabase, bounty, event, targetState, user.id)
+    await sendTransitionNotifications(supabase, bountyData, event, targetState, user.id)
 
     return NextResponse.json({
       success: true,
