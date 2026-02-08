@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import type { Database } from '@/types/database'
+
+type BountyUpdate = Database['public']['Tables']['bounties']['Update']
+type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
 
 // GET /api/bounties/[id] - Get single bounty with full details
 export async function GET(
@@ -90,12 +94,13 @@ export async function PATCH(
     const body = await request.json()
 
     // Update bounty
+    const bountyUpdate: BountyUpdate = {
+      ...body,
+      updated_at: new Date().toISOString(),
+    }
     const { data: updatedBounty, error: updateError } = await supabase
       .from('bounties')
-      .update({
-        ...body,
-        updated_at: new Date().toISOString(),
-      } as Record<string, unknown>)
+      .update(bountyUpdate)
       .eq('id', id)
       .select()
       .single()
@@ -105,12 +110,13 @@ export async function PATCH(
     }
 
     // Log activity
-    await supabase.from('activity_logs').insert({
+    const activityLog: ActivityLogInsert = {
       user_id: user.id,
       bounty_id: id,
       action: 'bounty_updated',
       details: { changes: Object.keys(body) },
-    } as Record<string, unknown>)
+    }
+    await supabase.from('activity_logs').insert(activityLog)
 
     return NextResponse.json(updatedBounty)
   } catch (error) {

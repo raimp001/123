@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import type { Database } from '@/types/database'
+
+type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
+type ActivityLogInsert = Database['public']['Tables']['activity_logs']['Insert']
+type BountyUpdate = Database['public']['Tables']['bounties']['Update']
 
 const approvalSchema = z.object({
   action: z.enum(['approve', 'reject']),
@@ -90,12 +95,13 @@ export async function POST(
     ]
 
     // Update bounty state
+    const bountyUpdate: BountyUpdate = {
+      state: newState,
+      state_history: newStateHistory,
+    }
     const { data: updatedBounty, error: updateError } = await supabase
       .from('bounties')
-      .update({
-        state: newState,
-        state_history: newStateHistory,
-      } as Record<string, unknown>)
+      .update(bountyUpdate)
       .eq('id', bountyId)
       .select()
       .single()
@@ -113,9 +119,9 @@ export async function POST(
       ? `Your bounty "${bounty.title}" has been approved and is now open for proposals from labs.`
       : `Your bounty "${bounty.title}" was not approved.${reason ? ` Reason: ${reason}` : ''} Please review and resubmit.`
 
-    await supabase.from('notifications').insert({
+    const notification: NotificationInsert = {
       user_id: bounty.funder_id,
-      type: 'bounty_update' as const,
+      type: 'bounty_update',
       title: notificationTitle,
       message: notificationMessage,
       data: {
@@ -123,10 +129,11 @@ export async function POST(
         action: action,
         reason: reason || null,
       },
-    } as Record<string, unknown>)
+    }
+    await supabase.from('notifications').insert(notification)
 
     // Log activity
-    await supabase.from('activity_logs').insert({
+    const activityLog: ActivityLogInsert = {
       user_id: user.id,
       bounty_id: bountyId,
       action: action === 'approve' ? 'bounty_approved' : 'bounty_rejected',
@@ -135,7 +142,8 @@ export async function POST(
         reason: reason || null,
         new_state: newState,
       },
-    } as Record<string, unknown>)
+    }
+    await supabase.from('activity_logs').insert(activityLog)
 
     return NextResponse.json({
       success: true,
