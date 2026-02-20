@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { Lab } from '@/types/database'
+import { createClient } from '@/lib/supabase/client'
 
 interface LabWithStats extends Lab {
   bounties_completed?: number

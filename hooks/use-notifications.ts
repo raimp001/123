@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Notification } from '@/types/database'
+import type { Notification as DbNotification } from '@/types/database'
 import { useAuth } from '@/contexts/auth-context'
 
 interface UseNotificationsReturn {
-  notifications: Notification[]
+  notifications: DbNotification[]
   unreadCount: number
   isLoading: boolean
   markAsRead: (id: string) => Promise<void>
@@ -16,7 +16,7 @@ interface UseNotificationsReturn {
 
 export function useNotifications(): UseNotificationsReturn {
   const { user } = useAuth()
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notifications, setNotifications] = useState<DbNotification[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchNotifications = useCallback(async () => {
@@ -107,12 +107,12 @@ export function useNotifications(): UseNotificationsReturn {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications(prev => [payload.new as Notification, ...prev])
+          setNotifications(prev => [payload.new as DbNotification, ...prev])
           
           // Show browser notification if permission granted
-          if (Notification.permission === 'granted') {
-            new Notification((payload.new as Notification).title, {
-              body: (payload.new as Notification).message,
+          if (globalThis.Notification?.permission === 'granted') {
+            new globalThis.Notification((payload.new as DbNotification).title, {
+              body: (payload.new as DbNotification).message,
               icon: '/favicon.ico',
             })
           }
@@ -121,8 +121,8 @@ export function useNotifications(): UseNotificationsReturn {
       .subscribe()
 
     // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission()
+    if ('Notification' in window && globalThis.Notification.permission === 'default') {
+      globalThis.Notification.requestPermission()
     }
 
     return () => {

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data to match frontend expectations
-    const transformedLabs = (data || []).map(lab => ({
+    const transformedLabs = (data || []).map((lab: any) => ({
       ...lab,
       bio: lab.description,
       institution: lab.institution_affiliation,

@@ -33,7 +33,7 @@ interface PageProps {
 export default function BountyDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const { bounty, isLoading, error, transition } = useBounty(id)
 
   const handleTransition = async (event: string, data?: Record<string, unknown>) => {
@@ -119,8 +119,25 @@ export default function BountyDetailPage({ params }: PageProps) {
           {isOwner && bounty.state === 'drafting' && (
             <Button onClick={() => handleTransition('SUBMIT_DRAFT')} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
               <Send className="w-4 h-4 mr-2" />
-              Submit for Funding
+              Submit for Admin Review
             </Button>
+          )}
+          {isAdmin && bounty.state === 'admin_review' && (
+            <>
+              <Button
+                variant="outline"
+                className="border-border text-foreground hover:bg-secondary rounded-full"
+                onClick={() => handleTransition('ADMIN_REQUEST_CHANGES')}
+              >
+                Request Changes
+              </Button>
+              <Button
+                onClick={() => handleTransition('ADMIN_APPROVE_PROTOCOL')}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+              >
+                Approve for Funding
+              </Button>
+            </>
           )}
           {isOwner && bounty.state === 'ready_for_funding' && (
             <Button onClick={() => handleTransition('INITIATE_FUNDING', { paymentMethod: 'stripe' })} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">

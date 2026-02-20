@@ -192,6 +192,11 @@ export default function WhitepaperPage() {
                 (research sponsors, DAOs, foundations, corporations) with <strong className="text-foreground">Labs</strong> 
                 (verified research institutions, independent scientists, university labs).
               </p>
+              <p>
+                Before any bounty can be funded, it enters an <strong className="text-foreground">admin ethics gate</strong>.
+                SciFlow uses an OpenClaw-style orchestration layer (harm scan, ethics scan, quality scan) to flag risky
+                proposals and route them for manual approval.
+              </p>
               
               <div className="grid md:grid-cols-2 gap-3 mt-6">
                 {[

@@ -685,6 +685,13 @@ export const stateMetadata: Record<string, {
     icon: 'FileCheck',
     allowedActions: [],
   },
+  admin_review: {
+    label: 'Admin Review',
+    description: 'Ethics and safety review required before funding',
+    color: 'amber',
+    icon: 'ShieldCheck',
+    allowedActions: ['ADMIN_APPROVE_PROTOCOL', 'ADMIN_REQUEST_CHANGES', 'ADMIN_REJECT_PROTOCOL'],
+  },
   ready_for_funding: {
     label: 'Ready for Funding',
     description: 'Protocol approved, awaiting escrow deposit',

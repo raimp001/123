@@ -46,15 +46,15 @@ export function useWalletAuth() {
       setStep('signing')
       setError(null)
 
-      const nonceRes = await fetch(`/api/auth/wallet?address=${walletAddress}`)
+      const nonceRes = await fetch(`/api/auth/wallet?address=${walletAddress}&provider=evm`)
       if (!nonceRes.ok) throw new Error('Failed to get authentication challenge')
-      const { message } = await nonceRes.json()
+      const { message, nonce } = await nonceRes.json()
 
       const signature = await signMessageAsync({ message })
 
       setStep('authenticating')
 
-      const { error: authError } = await signInWithWallet('evm', walletAddress, signature)
+      const { error: authError } = await signInWithWallet('evm', walletAddress, signature, message, nonce)
       if (authError) throw authError
 
       setStep('idle')
@@ -91,18 +91,18 @@ export function useWalletAuth() {
       setStep('signing')
 
       // Get nonce
-      const nonceRes = await fetch(`/api/auth/wallet?address=${walletAddress}`)
+      const nonceRes = await fetch(`/api/auth/wallet?address=${walletAddress}&provider=solana`)
       if (!nonceRes.ok) throw new Error('Failed to get authentication challenge')
-      const { message } = await nonceRes.json()
+      const { message, nonce } = await nonceRes.json()
 
       // Sign
       const encodedMessage = new TextEncoder().encode(message)
       const signedMessage = await solana.signMessage(encodedMessage, 'utf8')
-      const signature = Buffer.from(signedMessage.signature).toString('base64')
+      const signature = btoa(String.fromCharCode(...signedMessage.signature))
 
       setStep('authenticating')
 
-      const { error: authError } = await signInWithWallet('solana', walletAddress, signature)
+      const { error: authError } = await signInWithWallet('solana', walletAddress, signature, message, nonce)
       if (authError) throw authError
 
       setStep('idle')

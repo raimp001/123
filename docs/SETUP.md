@@ -23,7 +23,8 @@ This guide will help you set up SciFlow for local development and production dep
 
 1. Open the SQL Editor in your Supabase dashboard
 2. Copy the contents of `lib/db/migrations/001_initial_schema.sql`
-3. Run the SQL to create all tables, indexes, and RLS policies
+3. Run the SQL to create all core tables, indexes, and RLS policies
+4. Run `lib/db/migrations/002_wallet_auth_nonces.sql` to enable nonce-backed wallet auth replay protection
 
 ### Get Your API Keys
 
@@ -65,6 +66,7 @@ BASE_ESCROW_CONTRACT=0x...
 # App Config
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 PLATFORM_FEE_PERCENTAGE=5
+ALLOW_INSECURE_CHAIN_VERIFICATION=false  # keep false in production
 ```
 
 ---

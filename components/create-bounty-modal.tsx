@@ -31,11 +31,14 @@ import {
   ArrowLeft,
   CheckCircle2,
   Trash2,
-  FlaskConical
+  FlaskConical,
+  Loader2
 } from "lucide-react"
-import { PaymentModal } from "./payment-modal"
+import { useCreateBounty } from "@/hooks/use-bounties"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
-type Step = "basics" | "protocol" | "milestones" | "payment" | "review"
+type Step = "basics" | "protocol" | "milestones" | "review"
 
 interface MilestoneInput {
   id: string
@@ -46,8 +49,10 @@ interface MilestoneInput {
 }
 
 export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<Step>("basics")
+  const { createBounty, isCreating } = useCreateBounty()
   
   // Form state
   const [title, setTitle] = useState("")
@@ -98,6 +103,12 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
 
   const totalPercentage = milestones.reduce((sum, m) => sum + m.percentage, 0)
 
+  const parseLines = (value: string) =>
+    value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+
   const handleNext = () => {
     const nextIndex = currentStepIndex + 1
     if (nextIndex < steps.length) {
@@ -110,6 +121,45 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
     if (prevIndex >= 0) {
       setStep(steps[prevIndex].id)
     }
+  }
+
+  const handleCreate = async () => {
+    if (!title.trim() || !description.trim() || !methodology.trim() || budgetNumber <= 0) {
+      toast.error("Please complete title, description, methodology, and budget")
+      return
+    }
+
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+      toast.error("Milestone percentages must add up to 100%")
+      return
+    }
+
+    const result = await createBounty({
+      title: title.trim(),
+      description: description.trim(),
+      methodology: methodology.trim(),
+      data_requirements: parseLines(dataRequirements),
+      quality_standards: parseLines(dataRequirements),
+      total_budget: budgetNumber,
+      currency,
+      tags: category ? [category] : [],
+      milestones: milestones.map((milestone) => ({
+        title: milestone.title || `Milestone ${milestone.id}`,
+        description: milestone.description || "Deliver milestone evidence",
+        deliverables: parseLines(milestone.description || "").slice(0, 5),
+        payout_percentage: milestone.percentage,
+      })),
+    })
+
+    if (!result.success || !result.bounty) {
+      toast.error(result.error || "Failed to create bounty")
+      return
+    }
+
+    toast.success("Bounty submitted for admin review")
+    setOpen(false)
+    setStep("basics")
+    router.push(`/dashboard/bounties/${result.bounty.id}`)
   }
 
   return (
@@ -377,17 +427,18 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
               </CardContent>
             </Card>
 
-            <PaymentModal 
-              bountyTitle={title}
-              amount={budgetNumber}
-              currency={currency}
-              trigger={
-                <Button className="w-full bg-amber-500 hover:bg-amber-400 text-navy-900">
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Fund Escrow & Create Bounty
-                </Button>
-              }
-            />
+            <Button
+              className="w-full bg-amber-500 hover:bg-amber-400 text-navy-900"
+              onClick={handleCreate}
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <DollarSign className="w-4 h-4 mr-2" />
+              )}
+              Create Bounty (Admin Review)
+            </Button>
           </div>
         )}
 

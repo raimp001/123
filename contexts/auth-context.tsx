@@ -19,7 +19,13 @@ interface AuthContextType {
   walletAddress: string | null
   signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
   signUpWithEmail: (email: string, password: string, fullName: string, role: 'funder' | 'lab') => Promise<{ error: Error | null }>
-  signInWithWallet: (provider: 'solana' | 'evm', address: string, signature: string) => Promise<{ error: Error | null }>
+  signInWithWallet: (
+    provider: 'solana' | 'evm',
+    address: string,
+    signature: string,
+    message: string,
+    nonce: string,
+  ) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -172,7 +178,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signInWithWallet = async (provider: 'solana' | 'evm', address: string, signature: string) => {
+  const signInWithWallet = async (
+    provider: 'solana' | 'evm',
+    address: string,
+    signature: string,
+    message: string,
+    nonce: string,
+  ) => {
     if (!supabase) {
       return { error: new Error('Authentication not configured. Please set up Supabase.') }
     }
@@ -181,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/wallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, address, signature }),
+        body: JSON.stringify({ provider, address, signature, message, nonce }),
       })
 
       const result = await response.json()

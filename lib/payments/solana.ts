@@ -126,6 +126,14 @@ export class SolanaPaymentService {
       return { success: false, error: 'Solana not configured' }
     }
 
+    const allowInsecureVerification = process.env.ALLOW_INSECURE_CHAIN_VERIFICATION === 'true'
+    if (!allowInsecureVerification) {
+      return {
+        success: false,
+        error: 'Strict Solana transaction verification is not enabled. Set ALLOW_INSECURE_CHAIN_VERIFICATION=true only for local testing.',
+      }
+    }
+
     try {
       // In production, this would:
       // 1. Fetch transaction from RPC

@@ -1,24 +1,87 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import type { Database } from '@/types/database'
 
-/**
- * State Machine Transition Rules
- * Defines valid transitions and required conditions
- */
-const stateTransitions: Record<string, {
-  validEvents: string[]
-  targetStates: Record<string, string>
-  permissions: ('funder' | 'lab' | 'admin' | 'arbitrator')[]
-  conditions?: string[]
-}> = {
+type ActorPermission = 'funder' | 'lab' | 'admin' | 'arbitrator'
+type TransitionEvent =
+  | 'SUBMIT_DRAFT'
+  | 'ADMIN_APPROVE_PROTOCOL'
+  | 'ADMIN_REQUEST_CHANGES'
+  | 'ADMIN_REJECT_PROTOCOL'
+  | 'INITIATE_FUNDING'
+  | 'FUNDING_CONFIRMED'
+  | 'FUNDING_FAILED'
+  | 'SELECT_LAB'
+  | 'CANCEL_BOUNTY'
+  | 'EXTEND_BIDDING'
+  | 'SUBMIT_MILESTONE'
+  | 'APPROVE_MILESTONE'
+  | 'REQUEST_REVISION'
+  | 'INITIATE_DISPUTE'
+  | 'RESOLVE_DISPUTE'
+  | 'CONFIRM_PAYOUT'
+
+type BountyRow = Database['public']['Tables']['bounties']['Row']
+type MilestoneRow = Database['public']['Tables']['milestones']['Row']
+type ProposalRow = Database['public']['Tables']['proposals']['Row']
+type EscrowRow = Database['public']['Tables']['escrows']['Row']
+type DisputeRow = Database['public']['Tables']['disputes']['Row']
+
+type BountyWithRelations = BountyRow & {
+  milestones: MilestoneRow[]
+  proposals: ProposalRow[]
+  escrow: EscrowRow | null
+  selected_lab: { user_id: string } | null
+  disputes: DisputeRow[]
+}
+
+const transitionSchema = z.object({
+  event: z.enum([
+    'SUBMIT_DRAFT',
+    'ADMIN_APPROVE_PROTOCOL',
+    'ADMIN_REQUEST_CHANGES',
+    'ADMIN_REJECT_PROTOCOL',
+    'INITIATE_FUNDING',
+    'FUNDING_CONFIRMED',
+    'FUNDING_FAILED',
+    'SELECT_LAB',
+    'CANCEL_BOUNTY',
+    'EXTEND_BIDDING',
+    'SUBMIT_MILESTONE',
+    'APPROVE_MILESTONE',
+    'REQUEST_REVISION',
+    'INITIATE_DISPUTE',
+    'RESOLVE_DISPUTE',
+    'CONFIRM_PAYOUT',
+  ]),
+  data: z.record(z.unknown()).optional(),
+})
+
+const stateTransitions: Record<
+  string,
+  {
+    validEvents: TransitionEvent[]
+    targetStates: Partial<Record<TransitionEvent, string>>
+    permissions: ActorPermission[]
+  }
+> = {
   drafting: {
     validEvents: ['SUBMIT_DRAFT', 'CANCEL_BOUNTY'],
     targetStates: {
-      SUBMIT_DRAFT: 'ready_for_funding',
+      SUBMIT_DRAFT: 'admin_review',
       CANCEL_BOUNTY: 'cancelled',
     },
     permissions: ['funder'],
+  },
+  admin_review: {
+    validEvents: ['ADMIN_APPROVE_PROTOCOL', 'ADMIN_REQUEST_CHANGES', 'ADMIN_REJECT_PROTOCOL'],
+    targetStates: {
+      ADMIN_APPROVE_PROTOCOL: 'ready_for_funding',
+      ADMIN_REQUEST_CHANGES: 'drafting',
+      ADMIN_REJECT_PROTOCOL: 'cancelled',
+    },
+    permissions: ['admin'],
   },
   ready_for_funding: {
     validEvents: ['INITIATE_FUNDING', 'CANCEL_BOUNTY'],
@@ -34,8 +97,7 @@ const stateTransitions: Record<string, {
       FUNDING_CONFIRMED: 'bidding',
       FUNDING_FAILED: 'ready_for_funding',
     },
-    permissions: ['funder', 'admin'],
-    conditions: ['escrow_created'],
+    permissions: ['admin'],
   },
   bidding: {
     validEvents: ['SELECT_LAB', 'CANCEL_BOUNTY', 'EXTEND_BIDDING'],
@@ -45,7 +107,6 @@ const stateTransitions: Record<string, {
       EXTEND_BIDDING: 'bidding',
     },
     permissions: ['funder'],
-    conditions: ['has_proposals'],
   },
   active_research: {
     validEvents: ['SUBMIT_MILESTONE', 'INITIATE_DISPUTE'],
@@ -58,7 +119,7 @@ const stateTransitions: Record<string, {
   milestone_review: {
     validEvents: ['APPROVE_MILESTONE', 'REQUEST_REVISION', 'INITIATE_DISPUTE'],
     targetStates: {
-      APPROVE_MILESTONE: 'active_research', // or completed_payout if last milestone
+      APPROVE_MILESTONE: 'active_research',
       REQUEST_REVISION: 'active_research',
       INITIATE_DISPUTE: 'dispute_resolution',
     },
@@ -67,7 +128,7 @@ const stateTransitions: Record<string, {
   dispute_resolution: {
     validEvents: ['RESOLVE_DISPUTE'],
     targetStates: {
-      RESOLVE_DISPUTE: 'resolved', // actual state depends on resolution
+      RESOLVE_DISPUTE: 'partial_settlement',
     },
     permissions: ['admin', 'arbitrator'],
   },
@@ -80,10 +141,85 @@ const stateTransitions: Record<string, {
   },
 }
 
-const transitionSchema = z.object({
-  event: z.string(),
-  data: z.record(z.any()).optional(),
-})
+function isEscrowFunded(escrow: EscrowRow | null) {
+  return escrow?.status === 'locked' || escrow?.status === 'partially_released' || escrow?.status === 'fully_released'
+}
+
+function resolveTargetState(event: TransitionEvent, bounty: BountyWithRelations, eventData?: Record<string, unknown>) {
+  const transition = stateTransitions[bounty.state]
+  let targetState = transition?.targetStates[event]
+
+  if (event === 'APPROVE_MILESTONE') {
+    const verifiedCount = bounty.milestones.filter((milestone) => milestone.status === 'verified').length
+    if (verifiedCount + 1 >= bounty.milestones.length) {
+      targetState = 'completed_payout'
+    }
+  }
+
+  if (event === 'RESOLVE_DISPUTE') {
+    const resolution = typeof eventData?.resolution === 'string' ? eventData.resolution : undefined
+    if (resolution === 'funder_wins') targetState = 'refunding'
+    if (resolution === 'lab_wins') targetState = 'completed_payout'
+    if (resolution === 'partial_refund') targetState = 'partial_settlement'
+  }
+
+  return targetState
+}
+
+function validateEventData(event: TransitionEvent, bounty: BountyWithRelations, eventData?: Record<string, unknown>) {
+  if (event === 'SELECT_LAB') {
+    const proposalId = typeof eventData?.proposalId === 'string' ? eventData.proposalId : undefined
+    if (!proposalId) return { ok: false, error: 'proposalId is required' }
+
+    const proposal = bounty.proposals.find((item) => item.id === proposalId)
+    if (!proposal) return { ok: false, error: 'Selected proposal does not belong to this bounty' }
+
+    if (!isEscrowFunded(bounty.escrow)) {
+      return { ok: false, error: 'Escrow must be funded before selecting a lab' }
+    }
+
+    if (!['pending', 'submitted'].includes(proposal.status)) {
+      return { ok: false, error: 'Proposal is not selectable in current status' }
+    }
+
+    return { ok: true as const, proposal }
+  }
+
+  if (event === 'APPROVE_MILESTONE' || event === 'REQUEST_REVISION' || event === 'SUBMIT_MILESTONE') {
+    const milestoneId = typeof eventData?.milestoneId === 'string' ? eventData.milestoneId : undefined
+    if (!milestoneId) return { ok: false, error: 'milestoneId is required' }
+    const milestone = bounty.milestones.find((item) => item.id === milestoneId)
+    if (!milestone) return { ok: false, error: 'Milestone does not belong to this bounty' }
+
+    if (event === 'APPROVE_MILESTONE' && milestone.status !== 'submitted') {
+      return { ok: false, error: 'Only submitted milestones can be approved' }
+    }
+
+    return { ok: true as const, milestone }
+  }
+
+  if (event === 'FUNDING_CONFIRMED' && !isEscrowFunded(bounty.escrow)) {
+    return { ok: false, error: 'Escrow is not funded/locked yet' }
+  }
+
+  if (event === 'INITIATE_DISPUTE') {
+    if (typeof eventData?.reason !== 'string' || typeof eventData?.description !== 'string') {
+      return { ok: false, error: 'Dispute reason and description are required' }
+    }
+  }
+
+  if (event === 'RESOLVE_DISPUTE') {
+    const openDispute = bounty.disputes.find((item) => item.status === 'open')
+    if (!openDispute) return { ok: false, error: 'No open dispute to resolve' }
+
+    const resolution = eventData?.resolution
+    if (!['funder_wins', 'lab_wins', 'partial_refund'].includes(String(resolution))) {
+      return { ok: false, error: 'Invalid dispute resolution value' }
+    }
+  }
+
+  return { ok: true as const }
+}
 
 export async function POST(
   request: NextRequest,
@@ -92,26 +228,24 @@ export async function POST(
   try {
     const { id } = await params
     const supabase = await createClient()
-    
-    // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user role
     const { data: dbUser } = await supabase
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    const userRole = dbUser?.role || 'funder'
-
-    // Parse request
     const body = await request.json()
     const validationResult = transitionSchema.safeParse(body)
-    
     if (!validationResult.success) {
       return NextResponse.json(
         { error: 'Invalid request', details: validationResult.error.flatten() },
@@ -119,9 +253,9 @@ export async function POST(
       )
     }
 
-    const { event, data: eventData } = validationResult.data
+    const event = validationResult.data.event
+    const eventData = validationResult.data.data as Record<string, unknown> | undefined
 
-    // Get current bounty state
     const { data: bounty, error: fetchError } = await supabase
       .from('bounties')
       .select(`
@@ -129,97 +263,79 @@ export async function POST(
         milestones(*),
         proposals(*),
         escrow:escrows(*),
+        disputes(*),
         selected_lab:labs(user_id)
       `)
       .eq('id', id)
       .single()
 
-    if (fetchError) {
+    if (fetchError || !bounty) {
       return NextResponse.json({ error: 'Bounty not found' }, { status: 404 })
     }
 
-    const currentState = bounty.state
-    const transition = stateTransitions[currentState]
+    const typedBounty = {
+      ...(bounty as BountyWithRelations),
+      escrow: Array.isArray((bounty as { escrow?: unknown }).escrow)
+        ? (((bounty as { escrow: EscrowRow[] }).escrow[0] as EscrowRow | undefined) || null)
+        : ((bounty as { escrow?: EscrowRow | null }).escrow || null),
+      selected_lab: Array.isArray((bounty as { selected_lab?: unknown }).selected_lab)
+        ? (((bounty as { selected_lab: Array<{ user_id: string }> }).selected_lab[0] as { user_id: string } | undefined) || null)
+        : ((bounty as { selected_lab?: { user_id: string } | null }).selected_lab || null),
+    } as BountyWithRelations
+    const transition = stateTransitions[typedBounty.state]
 
     if (!transition) {
-      return NextResponse.json(
-        { error: `No transitions defined for state: ${currentState}` },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: `No transitions defined for state: ${typedBounty.state}` }, { status: 400 })
     }
 
-    // Validate event is valid for current state
     if (!transition.validEvents.includes(event)) {
       return NextResponse.json(
-        { 
-          error: `Event '${event}' is not valid for state '${currentState}'`,
+        {
+          error: `Event '${event}' is not valid for state '${typedBounty.state}'`,
           validEvents: transition.validEvents,
         },
         { status: 400 }
       )
     }
 
-    // Check permissions
-    const isOwner = bounty.funder_id === user.id
-    const isAssignedLab = bounty.selected_lab?.user_id === user.id
-    
-    let hasPermission = false
-    if (transition.permissions.includes('funder') && isOwner) hasPermission = true
-    if (transition.permissions.includes('lab') && isAssignedLab) hasPermission = true
-    if (transition.permissions.includes('admin') && userRole === 'admin') hasPermission = true
-    if (transition.permissions.includes('arbitrator') && userRole === 'arbitrator') hasPermission = true
+    const userRole = dbUser?.role || 'funder'
+    const isOwner = typedBounty.funder_id === user.id
+    const isAssignedLab = typedBounty.selected_lab?.user_id === user.id
+
+    const hasPermission =
+      (transition.permissions.includes('funder') && isOwner) ||
+      (transition.permissions.includes('lab') && isAssignedLab) ||
+      (transition.permissions.includes('admin') && userRole === 'admin') ||
+      (transition.permissions.includes('arbitrator') && userRole === 'arbitrator')
 
     if (!hasPermission) {
-      return NextResponse.json(
-        { error: 'You do not have permission to perform this action' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'You do not have permission to perform this action' }, { status: 403 })
     }
 
-    // Determine target state
-    let targetState = transition.targetStates[event]
-
-    // Special logic for certain events
-    if (event === 'APPROVE_MILESTONE') {
-      const completedMilestones = bounty.milestones.filter((m: { status: string }) => m.status === 'verified').length
-      if (completedMilestones + 1 >= bounty.milestones.length) {
-        targetState = 'completed_payout'
-      }
+    const validation = validateEventData(event, typedBounty, eventData)
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    if (event === 'RESOLVE_DISPUTE' && eventData?.resolution) {
-      switch (eventData.resolution) {
-        case 'funder_wins':
-          targetState = 'refunding'
-          break
-        case 'lab_wins':
-          targetState = 'completed_payout'
-          break
-        case 'partial_refund':
-          targetState = 'partial_settlement'
-          break
-      }
+    const targetState = resolveTargetState(event, typedBounty, eventData)
+    if (!targetState) {
+      return NextResponse.json({ error: 'Unable to resolve transition target state' }, { status: 400 })
     }
 
-    // Build update object
     const updates: Record<string, unknown> = {
       state: targetState,
       updated_at: new Date().toISOString(),
     }
 
-    // Add timestamps based on event
-    if (event === 'FUNDING_CONFIRMED') {
-      updates.funded_at = new Date().toISOString()
-    }
-    if (event === 'SELECT_LAB') {
+    if (event === 'FUNDING_CONFIRMED') updates.funded_at = new Date().toISOString()
+    if (event === 'SELECT_LAB' && validation.ok && 'proposal' in validation && validation.proposal) {
       updates.started_at = new Date().toISOString()
-      updates.selected_lab_id = eventData?.labId
+      updates.selected_lab_id = validation.proposal.lab_id
     }
     if (targetState === 'completed' || targetState === 'completed_payout') {
       updates.completed_at = new Date().toISOString()
     }
 
-    // Perform state transition
     const { data: updatedBounty, error: updateError } = await supabase
       .from('bounties')
       .update(updates)
@@ -231,27 +347,23 @@ export async function POST(
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    // Handle side effects
-    await handleTransitionSideEffects(supabase, bounty, event, eventData, user.id)
+    await handleTransitionSideEffects(supabase, typedBounty, event, eventData, user.id)
+    await sendTransitionNotifications(supabase, typedBounty, event, user.id)
 
-    // Log activity
     await supabase.from('activity_logs').insert({
       user_id: user.id,
       bounty_id: id,
       action: `state_transition:${event}`,
       details: {
-        from_state: currentState,
+        from_state: typedBounty.state,
         to_state: targetState,
-        event_data: eventData,
+        event_data: eventData || {},
       },
     })
 
-    // Send notifications
-    await sendTransitionNotifications(supabase, bounty, event, targetState, user.id)
-
     return NextResponse.json({
       success: true,
-      previousState: currentState,
+      previousState: typedBounty.state,
       newState: targetState,
       bounty: updatedBounty,
     })
@@ -263,42 +375,39 @@ export async function POST(
 
 async function handleTransitionSideEffects(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  bounty: { id: string; milestones: Array<{ id: string; sequence: number }>; selected_lab?: { user_id: string } | null; proposals: Array<{ id: string; lab_id: string; staked_amount: number }> },
-  event: string,
+  bounty: BountyWithRelations,
+  event: TransitionEvent,
   eventData: Record<string, unknown> | undefined,
   userId: string
 ) {
   switch (event) {
-    case 'SELECT_LAB':
-      // Update proposal status
-      if (eventData?.proposalId) {
-        await supabase
-          .from('proposals')
-          .update({ status: 'accepted' })
-          .eq('id', eventData.proposalId)
+    case 'SELECT_LAB': {
+      const proposalId = eventData?.proposalId as string | undefined
+      if (!proposalId) break
 
-        // Reject other proposals
-        await supabase
-          .from('proposals')
-          .update({ status: 'rejected' })
-          .eq('bounty_id', bounty.id)
-          .neq('id', eventData.proposalId)
+      await supabase
+        .from('proposals')
+        .update({ status: 'accepted' })
+        .eq('id', proposalId)
 
-        // Lock stake for accepted lab
-        const proposal = bounty.proposals.find(p => p.id === eventData.proposalId)
-        if (proposal) {
-          await supabase.from('staking_transactions').insert({
-            lab_id: proposal.lab_id,
-            bounty_id: bounty.id,
-            type: 'lock',
-            amount: proposal.staked_amount,
-            balance_after: 0, // Will be calculated by trigger
-          })
-        }
+      await supabase
+        .from('proposals')
+        .update({ status: 'rejected', rejection_reason: 'Another proposal was selected' })
+        .eq('bounty_id', bounty.id)
+        .neq('id', proposalId)
+
+      const selectedProposal = bounty.proposals.find((proposal) => proposal.id === proposalId)
+      if (selectedProposal && selectedProposal.staked_amount > 0) {
+        await supabase.from('staking_transactions').insert({
+          lab_id: selectedProposal.lab_id,
+          bounty_id: bounty.id,
+          type: 'lock',
+          amount: selectedProposal.staked_amount,
+          balance_after: 0,
+        })
       }
 
-      // Set first milestone to in_progress
-      const firstMilestone = bounty.milestones.find(m => m.sequence === 1)
+      const firstMilestone = bounty.milestones.find((milestone) => milestone.sequence === 1)
       if (firstMilestone) {
         await supabase
           .from('milestones')
@@ -306,191 +415,166 @@ async function handleTransitionSideEffects(
           .eq('id', firstMilestone.id)
       }
       break
+    }
 
-    case 'APPROVE_MILESTONE':
-      if (eventData?.milestoneId) {
-        // Update milestone status
-        await supabase
-          .from('milestones')
-          .update({ 
-            status: 'verified',
-            verified_at: new Date().toISOString(),
-          })
-          .eq('id', eventData.milestoneId)
+    case 'SUBMIT_MILESTONE': {
+      const milestoneId = eventData?.milestoneId as string | undefined
+      if (!milestoneId) break
 
-        // Get milestone to calculate payout
-        const { data: milestone } = await supabase
-          .from('milestones')
-          .select('*, bounty:bounties(total_budget)')
-          .eq('id', eventData.milestoneId)
-          .single()
-
-        if (milestone) {
-          const payoutAmount = (milestone.payout_percentage / 100) * (milestone.bounty as { total_budget: number }).total_budget
-
-          // Create escrow release
-          const { data: escrow } = await supabase
-            .from('escrows')
-            .select('id')
-            .eq('bounty_id', bounty.id)
-            .single()
-
-          if (escrow) {
-            await supabase.from('escrow_releases').insert({
-              escrow_id: escrow.id,
-              milestone_id: eventData.milestoneId as string,
-              amount: payoutAmount,
-            })
-
-            // Update escrow released amount
-            await supabase
-              .from('escrows')
-              .update({ 
-                released_amount: supabase.rpc('increment_released', { amount: payoutAmount }),
-              })
-              .eq('id', escrow.id)
-          }
-
-          // Set next milestone to in_progress
-          const nextMilestone = bounty.milestones.find(m => m.sequence === milestone.sequence + 1)
-          if (nextMilestone) {
-            await supabase
-              .from('milestones')
-              .update({ status: 'in_progress' })
-              .eq('id', nextMilestone.id)
-          }
-        }
-      }
-      break
-
-    case 'INITIATE_DISPUTE':
-      if (eventData) {
-        await supabase.from('disputes').insert({
-          bounty_id: bounty.id,
-          initiated_by: userId,
-          reason: eventData.reason as string,
-          description: eventData.description as string,
-          evidence_links: eventData.evidenceLinks as string[] || [],
+      await supabase
+        .from('milestones')
+        .update({
+          status: 'submitted',
+          evidence_hash: (eventData?.evidenceHash as string | undefined) || null,
+          evidence_links: (eventData?.evidenceLinks as string[] | undefined) || [],
+          submitted_at: new Date().toISOString(),
         })
-      }
+        .eq('id', milestoneId)
       break
+    }
 
-    case 'RESOLVE_DISPUTE':
-      if (eventData) {
+    case 'APPROVE_MILESTONE': {
+      const milestoneId = eventData?.milestoneId as string | undefined
+      if (!milestoneId) break
+
+      await supabase
+        .from('milestones')
+        .update({ status: 'verified', verified_at: new Date().toISOString() })
+        .eq('id', milestoneId)
+
+      const milestone = bounty.milestones.find((item) => item.id === milestoneId)
+      if (!milestone) break
+
+      const payoutAmount = (Number(milestone.payout_percentage) / 100) * Number(bounty.total_budget)
+      const escrow = bounty.escrow
+      if (escrow) {
+        const nextReleased = Number(escrow.released_amount || 0) + payoutAmount
+        const nextStatus = nextReleased >= Number(escrow.total_amount) ? 'fully_released' : 'partially_released'
+
+        await supabase.from('escrow_releases').insert({
+          escrow_id: escrow.id,
+          milestone_id: milestoneId,
+          amount: payoutAmount,
+        })
+
         await supabase
-          .from('disputes')
+          .from('escrows')
           .update({
-            status: 'resolved',
-            resolution: eventData.resolution as string,
-            slash_amount: eventData.slashAmount as number,
-            resolved_at: new Date().toISOString(),
+            released_amount: nextReleased,
+            status: nextStatus,
           })
-          .eq('bounty_id', bounty.id)
-          .eq('status', 'open')
+          .eq('id', escrow.id)
+      }
 
-        // Handle stake slashing if funder wins
-        if (eventData.resolution === 'funder_wins' && eventData.slashAmount) {
-          const proposal = bounty.proposals.find(p => p.status === 'accepted')
-          if (proposal) {
-            await supabase.from('staking_transactions').insert({
-              lab_id: proposal.lab_id,
-              bounty_id: bounty.id,
-              type: 'slash',
-              amount: eventData.slashAmount as number,
-              balance_after: 0,
-            })
-          }
-        }
+      const nextMilestone = bounty.milestones.find((item) => item.sequence === milestone.sequence + 1)
+      if (nextMilestone) {
+        await supabase
+          .from('milestones')
+          .update({ status: 'in_progress' })
+          .eq('id', nextMilestone.id)
       }
       break
+    }
+
+    case 'REQUEST_REVISION': {
+      const milestoneId = eventData?.milestoneId as string | undefined
+      if (!milestoneId) break
+
+      await supabase
+        .from('milestones')
+        .update({
+          status: 'in_progress',
+          review_feedback: (eventData?.feedback as string | undefined) || 'Revision requested',
+        })
+        .eq('id', milestoneId)
+      break
+    }
+
+    case 'INITIATE_DISPUTE': {
+      await supabase.from('disputes').insert({
+        bounty_id: bounty.id,
+        initiated_by: userId,
+        reason: eventData?.reason as string,
+        description: eventData?.description as string,
+        evidence_links: (eventData?.evidenceLinks as string[]) || [],
+      })
+      break
+    }
+
+    case 'RESOLVE_DISPUTE': {
+      await supabase
+        .from('disputes')
+        .update({
+          status: 'resolved',
+          resolution: eventData?.resolution as string,
+          slash_amount: (eventData?.slashAmount as number) || null,
+          resolved_at: new Date().toISOString(),
+        })
+        .eq('bounty_id', bounty.id)
+        .eq('status', 'open')
+      break
+    }
   }
 }
 
 async function sendTransitionNotifications(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  bounty: { id: string; title: string; funder_id: string; selected_lab?: { user_id: string } | null },
-  event: string,
-  newState: string,
+  bounty: BountyWithRelations,
+  event: TransitionEvent,
   actorId: string
 ) {
   const notifications: Array<{
     user_id: string
-    type: string
+    type: 'bounty_update' | 'proposal_received' | 'proposal_accepted' | 'milestone_submitted' | 'milestone_approved' | 'milestone_rejected' | 'dispute_opened' | 'dispute_resolved' | 'payment_received' | 'system'
     title: string
     message: string
     data: Record<string, unknown>
   }> = []
 
-  switch (event) {
-    case 'SELECT_LAB':
-      if (bounty.selected_lab?.user_id) {
-        notifications.push({
-          user_id: bounty.selected_lab.user_id,
-          type: 'proposal_accepted',
-          title: 'Proposal Accepted!',
-          message: `Your proposal for "${bounty.title}" has been accepted. Research begins now.`,
-          data: { bounty_id: bounty.id },
-        })
-      }
-      break
+  if (event === 'SUBMIT_MILESTONE') {
+    notifications.push({
+      user_id: bounty.funder_id,
+      type: 'milestone_submitted',
+      title: 'Milestone Submitted',
+      message: `A milestone for "${bounty.title}" has been submitted for review.`,
+      data: { bounty_id: bounty.id },
+    })
+  }
 
-    case 'SUBMIT_MILESTONE':
+  if (event === 'REQUEST_REVISION' && bounty.selected_lab?.user_id) {
+    notifications.push({
+      user_id: bounty.selected_lab.user_id,
+      type: 'milestone_rejected',
+      title: 'Revision Requested',
+      message: `Revisions were requested for your milestone on "${bounty.title}".`,
+      data: { bounty_id: bounty.id },
+    })
+  }
+
+  if (event === 'APPROVE_MILESTONE' && bounty.selected_lab?.user_id) {
+    notifications.push({
+      user_id: bounty.selected_lab.user_id,
+      type: 'milestone_approved',
+      title: 'Milestone Approved',
+      message: `Your milestone for "${bounty.title}" has been approved.`,
+      data: { bounty_id: bounty.id },
+    })
+  }
+
+  if (event === 'INITIATE_DISPUTE') {
+    const disputeTarget = actorId === bounty.funder_id ? bounty.selected_lab?.user_id : bounty.funder_id
+    if (disputeTarget) {
       notifications.push({
-        user_id: bounty.funder_id,
-        type: 'milestone_submitted',
-        title: 'Milestone Submitted',
-        message: `A milestone for "${bounty.title}" has been submitted for review.`,
+        user_id: disputeTarget,
+        type: 'dispute_opened',
+        title: 'Dispute Opened',
+        message: `A dispute has been opened for "${bounty.title}".`,
         data: { bounty_id: bounty.id },
       })
-      break
-
-    case 'APPROVE_MILESTONE':
-      if (bounty.selected_lab?.user_id) {
-        notifications.push({
-          user_id: bounty.selected_lab.user_id,
-          type: 'milestone_approved',
-          title: 'Milestone Approved!',
-          message: `Your milestone for "${bounty.title}" has been approved. Payment will be released.`,
-          data: { bounty_id: bounty.id },
-        })
-      }
-      break
-
-    case 'REQUEST_REVISION':
-      if (bounty.selected_lab?.user_id) {
-        notifications.push({
-          user_id: bounty.selected_lab.user_id,
-          type: 'milestone_rejected',
-          title: 'Revision Requested',
-          message: `Revisions have been requested for your milestone on "${bounty.title}".`,
-          data: { bounty_id: bounty.id },
-        })
-      }
-      break
-
-    case 'INITIATE_DISPUTE':
-      const disputeTarget = actorId === bounty.funder_id 
-        ? bounty.selected_lab?.user_id 
-        : bounty.funder_id
-      if (disputeTarget) {
-        notifications.push({
-          user_id: disputeTarget,
-          type: 'dispute_opened',
-          title: 'Dispute Opened',
-          message: `A dispute has been opened for "${bounty.title}".`,
-          data: { bounty_id: bounty.id },
-        })
-      }
-      break
+    }
   }
 
   if (notifications.length > 0) {
-    await supabase.from('notifications').insert(notifications as Array<{
-      user_id: string
-      type: 'bounty_update' | 'proposal_received' | 'proposal_accepted' | 'milestone_submitted' | 'milestone_approved' | 'milestone_rejected' | 'dispute_opened' | 'dispute_resolved' | 'payment_received' | 'system'
-      title: string
-      message: string
-      data: Record<string, unknown>
-    }>)
+    await supabase.from('notifications').insert(notifications)
   }
 }

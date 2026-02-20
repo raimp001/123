@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { runOpenClawReview } from '@/lib/agents/openclaw-orchestrator'
 
 // Validation schemas
 const createBountySchema = z.object({
@@ -58,7 +59,9 @@ export async function GET(request: NextRequest) {
     if (myBounties && user) {
       query = query.eq('funder_id', user.id)
     } else {
-      query = query.eq('visibility', 'public')
+      query = query
+        .eq('visibility', 'public')
+        .not('state', 'in', '(drafting,admin_review,ready_for_funding,funding_escrow)')
     }
 
     if (state) {
@@ -97,7 +100,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to match frontend expectations (state -> current_state)
-    const transformedBounties = (data || []).map(bounty => ({
+    const transformedBounties = (data || []).map((bounty: any) => ({
       ...bounty,
       current_state: bounty.state,
     }))
@@ -150,14 +153,58 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const openClawResult = runOpenClawReview({
+      title: bountyData.title,
+      description: bountyData.description,
+      methodology: bountyData.methodology,
+      dataRequirements: bountyData.data_requirements,
+      qualityStandards: bountyData.quality_standards,
+      totalBudget: bountyData.total_budget,
+      currency: bountyData.currency,
+      milestones: milestonesData.map((milestone) => ({
+        title: milestone.title,
+        description: milestone.description,
+        deliverables: milestone.deliverables,
+        payoutPercentage: milestone.payout_percentage,
+      })),
+    })
+
+    if (openClawResult.decision === 'reject') {
+      return NextResponse.json(
+        {
+          error: 'Bounty rejected by safety screening. Revise and resubmit.',
+          review: openClawResult,
+        },
+        { status: 400 }
+      )
+    }
+
     // Create bounty
     const { data: bounty, error: bountyError } = await supabase
       .from('bounties')
       .insert({
         ...bountyData,
         funder_id: user.id,
-        state: 'drafting',
-        state_history: [{ state: 'drafting', timestamp: new Date().toISOString(), by: user.id }],
+        state: 'admin_review',
+        state_history: [
+          {
+            state: 'drafting',
+            timestamp: new Date().toISOString(),
+            by: user.id,
+          },
+          {
+            state: 'admin_review',
+            timestamp: new Date().toISOString(),
+            by: user.id,
+            reason: 'Mandatory ethics gate',
+            review: {
+              traceId: openClawResult.traceId,
+              decision: openClawResult.decision,
+              score: openClawResult.score,
+              signals: openClawResult.signals,
+            },
+          },
+        ],
       })
       .select()
       .single()
@@ -194,8 +241,36 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       bounty_id: bounty.id,
       action: 'bounty_created',
-      details: { title: bounty.title, budget: bounty.total_budget },
+      details: {
+        title: bounty.title,
+        budget: bounty.total_budget,
+        openclaw_trace_id: openClawResult.traceId,
+        openclaw_decision: openClawResult.decision,
+        openclaw_score: openClawResult.score,
+      },
     })
+
+    // Notify admins to review the new bounty before funding can begin.
+    const { data: admins } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'admin')
+
+    if (admins && admins.length > 0) {
+      await supabase.from('notifications').insert(
+        admins.map((admin: { id: string }) => ({
+          user_id: admin.id,
+          type: 'system',
+          title: 'New Bounty Requires Admin Review',
+          message: `"${bounty.title}" is awaiting ethics approval before funding.`,
+          data: {
+            bounty_id: bounty.id,
+            openclaw_trace_id: openClawResult.traceId,
+            openclaw_score: openClawResult.score,
+          },
+        }))
+      )
+    }
 
     // Fetch complete bounty with milestones
     const { data: completeBounty } = await supabase
@@ -204,7 +279,17 @@ export async function POST(request: NextRequest) {
       .eq('id', bounty.id)
       .single()
 
-    return NextResponse.json(completeBounty, { status: 201 })
+    return NextResponse.json(
+      {
+        ...completeBounty,
+        review: openClawResult,
+        workflow: {
+          next_state: 'admin_review',
+          note: 'All new bounties require admin ethics approval before funding.',
+        },
+      },
+      { status: 201 }
+    )
   } catch (error) {
     console.error('Error in POST /api/bounties:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

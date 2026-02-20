@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
+import { z } from 'zod'
 
-// Initialize Stripe
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' })
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-02-24.acacia' })
   : null
+
+const createStripeFundingSchema = z.object({
+  bounty_id: z.string().uuid(),
+  currency: z.string().optional(),
+})
 
 // POST /api/payments/stripe - Create payment intent for bounty funding
 export async function POST(request: NextRequest) {
@@ -15,24 +20,26 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient()
-    
-    // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    const { bounty_id, amount, currency } = body
-
-    if (!bounty_id || !amount) {
-      return NextResponse.json({ error: 'Missing bounty_id or amount' }, { status: 400 })
+    const validationResult = createStripeFundingSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 })
     }
 
-    // Verify bounty exists and belongs to user
+    const { bounty_id } = validationResult.data
+
     const { data: bounty, error: bountyError } = await supabase
       .from('bounties')
-      .select('id, title, funder_id, state, total_budget')
+      .select('id, title, funder_id, state, total_budget, currency')
       .eq('id', bounty_id)
       .single()
 
@@ -44,56 +51,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized to fund this bounty' }, { status: 403 })
     }
 
-    if (bounty.state !== 'drafting' && bounty.state !== 'ready_for_funding') {
-      return NextResponse.json({ error: 'Bounty is not in a fundable state' }, { status: 400 })
+    if (bounty.state !== 'ready_for_funding') {
+      return NextResponse.json(
+        { error: 'Bounty must be admin-approved and ready_for_funding before payment.' },
+        { status: 400 }
+      )
     }
 
-    // Calculate platform fee
-    const platformFeePercent = parseInt(process.env.PLATFORM_FEE_PERCENTAGE || '5')
-    const platformFee = Math.round(amount * platformFeePercent / 100)
-    const totalAmount = amount + platformFee
+    if (bounty.currency !== 'USD') {
+      return NextResponse.json({ error: 'Stripe funding is only available for USD bounties.' }, { status: 400 })
+    }
 
-    // Create Stripe payment intent with manual capture
-    // This allows us to hold funds in escrow until milestones are completed
+    const platformFeePercent = Number(process.env.PLATFORM_FEE_PERCENTAGE || '5')
+    const baseAmount = Number(bounty.total_budget)
+    const platformFee = (baseAmount * platformFeePercent) / 100
+    const totalAmount = Number((baseAmount + platformFee).toFixed(2))
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalAmount * 100), // Stripe uses cents
-      currency: (currency || 'usd').toLowerCase(),
-      capture_method: 'manual', // Don't capture immediately - escrow style
+      amount: Math.round(totalAmount * 100),
+      currency: 'usd',
+      capture_method: 'manual',
       metadata: {
-        bounty_id,
+        bounty_id: bounty.id,
         user_id: user.id,
         platform_fee: platformFee.toString(),
-        original_amount: amount.toString(),
+        original_amount: baseAmount.toString(),
       },
       description: `SciFlow Bounty: ${bounty.title}`,
     })
 
-    // Create escrow record
-    const { error: escrowError } = await supabase
-      .from('escrows')
-      .upsert({
-        bounty_id,
-        payment_method: 'stripe',
-        payment_intent_id: paymentIntent.id,
-        total_amount: totalAmount,
-        platform_fee: platformFee,
-        currency: currency || 'USD',
-        status: 'pending',
-      })
+    const { error: escrowError } = await supabase.from('escrows').upsert({
+      bounty_id: bounty.id,
+      payment_method: 'stripe',
+      stripe_payment_intent_id: paymentIntent.id,
+      total_amount: totalAmount,
+      currency: 'USD',
+      status: 'pending',
+    })
 
     if (escrowError) {
-      console.error('Error creating escrow:', escrowError)
-      // Cancel the payment intent if escrow creation fails
       await stripe.paymentIntents.cancel(paymentIntent.id)
       return NextResponse.json({ error: 'Failed to create escrow record' }, { status: 500 })
     }
 
-    // Log activity
+    await supabase
+      .from('bounties')
+      .update({
+        state: 'funding_escrow',
+        payment_method: 'stripe',
+      })
+      .eq('id', bounty.id)
+
     await supabase.from('activity_logs').insert({
       user_id: user.id,
-      bounty_id,
+      bounty_id: bounty.id,
       action: 'payment_initiated',
-      details: { 
+      details: {
         payment_method: 'stripe',
         amount: totalAmount,
         payment_intent_id: paymentIntent.id,
@@ -105,6 +118,7 @@ export async function POST(request: NextRequest) {
       paymentIntentId: paymentIntent.id,
       amount: totalAmount,
       platformFee,
+      note: 'Authorize the payment intent client-side; bounty goes live after capturable funds are confirmed.',
     })
   } catch (error) {
     console.error('Error in POST /api/payments/stripe:', error)
@@ -121,13 +135,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const paymentIntentId = searchParams.get('payment_intent_id')
-
     if (!paymentIntentId) {
       return NextResponse.json({ error: 'Missing payment_intent_id' }, { status: 400 })
     }
 
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
-
     return NextResponse.json({
       status: paymentIntent.status,
       amount: paymentIntent.amount / 100,

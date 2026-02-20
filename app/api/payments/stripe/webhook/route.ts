@@ -1,12 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' })
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-02-24.acacia' })
   : null
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+async function markEscrowFunded(paymentIntent: Stripe.PaymentIntent) {
+  const bountyId = paymentIntent.metadata.bounty_id
+  const userId = paymentIntent.metadata.user_id
+
+  if (!bountyId || !userId) return
+
+  const supabase = createAdminClient()
+
+  await supabase
+    .from('escrows')
+    .update({
+      status: 'locked',
+      locked_at: new Date().toISOString(),
+      stripe_payment_intent_id: paymentIntent.id,
+    })
+    .eq('stripe_payment_intent_id', paymentIntent.id)
+
+  await supabase
+    .from('bounties')
+    .update({
+      state: 'bidding',
+      funded_at: new Date().toISOString(),
+      payment_method: 'stripe',
+    })
+    .eq('id', bountyId)
+
+  await supabase.from('notifications').insert({
+    user_id: userId,
+    type: 'payment_received',
+    title: 'Bounty Funded Successfully',
+    message: 'Escrow funds are secured and your bounty is now live for proposals.',
+    data: { bounty_id: bountyId, payment_intent_id: paymentIntent.id },
+  })
+
+  await supabase.from('activity_logs').insert({
+    user_id: userId,
+    bounty_id: bountyId,
+    action: 'payment_completed',
+    details: {
+      payment_method: 'stripe',
+      payment_intent_id: paymentIntent.id,
+      amount: paymentIntent.amount / 100,
+      status: paymentIntent.status,
+    },
+  })
+}
 
 // POST /api/payments/stripe/webhook - Handle Stripe webhooks
 export async function POST(request: NextRequest) {
@@ -17,132 +64,63 @@ export async function POST(request: NextRequest) {
 
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
-
     if (!signature) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
     let event: Stripe.Event
-
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-    } catch (err) {
-      console.error('Webhook signature verification failed:', err)
+    } catch (error) {
+      console.error('Webhook signature verification failed:', error)
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-
     switch (event.type) {
+      case 'payment_intent.amount_capturable_updated': {
+        await markEscrowFunded(event.data.object as Stripe.PaymentIntent)
+        break
+      }
+
       case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent
-        const bountyId = paymentIntent.metadata.bounty_id
-        const userId = paymentIntent.metadata.user_id
-
-        if (!bountyId || !userId) {
-          console.error('Missing bounty_id or user_id in payment intent metadata')
-          break
-        }
-
-        // Update escrow status to locked
-        await supabase
-          .from('escrows')
-          .update({ 
-            status: 'locked',
-            locked_at: new Date().toISOString(),
-          })
-          .eq('stripe_payment_intent_id', paymentIntent.id)
-
-        // Get current bounty to update state_history
-        const { data: currentBounty } = await supabase
-          .from('bounties')
-          .select('state_history')
-          .eq('id', bountyId)
-          .single()
-
-        const newStateHistory = [
-          ...(currentBounty?.state_history || []),
-          { 
-            from_state: 'funding_escrow',
-            to_state: 'bidding', 
-            timestamp: new Date().toISOString(), 
-            changed_by: userId,
-          }
-        ]
-
-        // Transition bounty to bidding (funds are now locked)
-        await supabase
-          .from('bounties')
-          .update({
-            state: 'bidding',
-            funded_at: new Date().toISOString(),
-            state_history: newStateHistory,
-          })
-          .eq('id', bountyId)
-
-        // Create notification
-        await supabase.from('notifications').insert({
-          user_id: userId,
-          type: 'payment_received',
-          title: 'Bounty Funded Successfully',
-          message: 'Your bounty is now live and accepting proposals from labs.',
-          data: { bounty_id: bountyId },
-        })
-
-        // Log activity
-        await supabase.from('activity_logs').insert({
-          user_id: userId,
-          bounty_id: bountyId,
-          action: 'payment_completed',
-          details: { 
-            payment_method: 'stripe',
-            payment_intent_id: paymentIntent.id,
-            amount: paymentIntent.amount / 100,
-          },
-        })
-
+        // Keep this for compatibility in case capture happens immediately.
+        await markEscrowFunded(event.data.object as Stripe.PaymentIntent)
         break
       }
 
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        const bountyId = paymentIntent.metadata.bounty_id
-        const userId = paymentIntent.metadata.user_id
+        const supabase = createAdminClient()
 
-        // Update escrow status
         await supabase
           .from('escrows')
-          .update({ status: 'pending' }) // Reset to pending on failure
+          .update({ status: 'pending' })
           .eq('stripe_payment_intent_id', paymentIntent.id)
 
-        // Create notification if we have user info
-        if (userId) {
+        if (paymentIntent.metadata.user_id) {
           await supabase.from('notifications').insert({
-            user_id: userId,
+            user_id: paymentIntent.metadata.user_id,
             type: 'system',
             title: 'Payment Failed',
-            message: 'Your payment could not be processed. Please try again.',
-            data: { bounty_id: bountyId },
+            message: 'Your payment authorization failed. Please retry funding.',
+            data: { bounty_id: paymentIntent.metadata.bounty_id || null },
           })
         }
-
         break
       }
 
       case 'payment_intent.canceled': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-
-        // Update escrow status
+        const supabase = createAdminClient()
         await supabase
           .from('escrows')
           .update({ status: 'refunded' })
           .eq('stripe_payment_intent_id', paymentIntent.id)
-
         break
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        break
     }
 
     return NextResponse.json({ received: true })

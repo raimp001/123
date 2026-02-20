@@ -1,6 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { Database } from '@/types/database'
 
 export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -8,12 +7,12 @@ export async function createClient() {
 
   if (!supabaseUrl || !supabaseKey) {
     console.warn('Supabase not configured. Using mock client.')
-    return null as unknown as ReturnType<typeof createServerClient<Database>>
+    return null as any
   }
 
   const cookieStore = await cookies()
 
-  return createServerClient<Database>(supabaseUrl, supabaseKey, {
+  return createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value
@@ -33,5 +32,5 @@ export async function createClient() {
         }
       },
     },
-  })
+  }) as any
 }

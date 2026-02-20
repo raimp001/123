@@ -10,7 +10,7 @@ const sections = [
     content: [
       {
         q: "What is SciFlow?",
-        a: "SciFlow is a marketplace connecting research funders with verified labs. Funders post bounties with milestones, labs submit proposals, and payments are released from escrow as milestones are verified."
+        a: "SciFlow is a marketplace connecting research funders with verified labs. Every bounty goes through admin safety/ethics review before funding, then labs can submit proposals and milestone-based escrow releases are unlocked only after verification."
       },
       {
         q: "Who can use SciFlow?",
@@ -105,7 +105,7 @@ const sections = [
     content: [
       {
         q: "What currencies can I use?",
-        a: "Fiat: USD, EUR, GBP via Stripe. Crypto: USDC on Solana and Base networks."
+        a: "Fiat: USD via Stripe. Crypto: USDC on Solana and Base."
       },
       {
         q: "Are there geographic restrictions?",

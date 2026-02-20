@@ -98,7 +98,7 @@ export class BaseCDPPaymentService {
   /**
    * Get configuration status for debugging
    */
-  getConfigStatus(): Record<string, boolean | string> {
+  getConfigStatus(): Record<string, boolean | string | number> {
     return {
       apiKeyName: !!this.config.apiKeyName,
       apiKeyPrivateKey: !!this.config.apiKeyPrivateKey,
@@ -167,6 +167,14 @@ export class BaseCDPPaymentService {
   async verifyDeposit(txHash: string, expectedAmount: number): Promise<BaseTransactionResult> {
     if (!this.isConfigured()) {
       return { success: false, error: 'Base CDP not configured' }
+    }
+
+    const allowInsecureVerification = process.env.ALLOW_INSECURE_CHAIN_VERIFICATION === 'true'
+    if (!allowInsecureVerification) {
+      return {
+        success: false,
+        error: 'Strict Base transaction verification is not enabled. Set ALLOW_INSECURE_CHAIN_VERIFICATION=true only for local testing.',
+      }
     }
 
     try {

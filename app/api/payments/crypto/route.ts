@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { solanaPayment } from '@/lib/payments/solana'
 import { baseCDPPayment, getExplorerTxUrl } from '@/lib/payments/base-cdp'
 
-// Crypto payment endpoints for Solana and Base USDC
-// Supports: Solana (SPL USDC) and Base (Coinbase CDP SDK)
+const createCryptoEscrowSchema = z.object({
+  bounty_id: z.string().uuid(),
+  chain: z.enum(['solana', 'base']),
+  wallet_address: z.string().min(20),
+})
+
+const confirmCryptoEscrowSchema = z.object({
+  escrow_id: z.string().uuid(),
+  tx_hash: z.string().min(16),
+})
+
+function getPaymentMethod(chain: 'solana' | 'base') {
+  return chain === 'solana' ? 'solana_usdc' : 'base_usdc'
+}
+
+function isBountyFundable(state: string) {
+  return state === 'ready_for_funding' || state === 'funding_escrow'
+}
 
 // GET /api/payments/crypto/status - Check payment service status
 export async function GET() {
@@ -26,30 +43,26 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    
-    // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    const { bounty_id, chain, amount, wallet_address } = body
-
-    if (!bounty_id || !chain || !amount || !wallet_address) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: bounty_id, chain, amount, wallet_address' 
-      }, { status: 400 })
+    const validationResult = createCryptoEscrowSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 })
     }
 
-    if (!['solana', 'base'].includes(chain)) {
-      return NextResponse.json({ error: 'Invalid chain. Use "solana" or "base"' }, { status: 400 })
-    }
+    const { bounty_id, chain, wallet_address } = validationResult.data
 
-    // Verify bounty exists and belongs to user
     const { data: bounty, error: bountyError } = await supabase
       .from('bounties')
-      .select('id, title, funder_id, state')
+      .select('id, title, funder_id, state, total_budget, currency')
       .eq('id', bounty_id)
       .single()
 
@@ -61,117 +74,111 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized to fund this bounty' }, { status: 403 })
     }
 
-    if (bounty.state !== 'drafting' && bounty.state !== 'ready_for_funding') {
+    if (!isBountyFundable(bounty.state)) {
       return NextResponse.json({ error: 'Bounty is not in a fundable state' }, { status: 400 })
     }
 
-    // Calculate platform fee
-    const platformFeePercent = parseInt(process.env.PLATFORM_FEE_PERCENTAGE || '5')
-    const platformFee = amount * platformFeePercent / 100
-    const totalAmount = amount + platformFee
-
-    // Generate escrow details based on chain using the appropriate service
-    let escrowDetails: {
-      escrow_address: string
-      deposit_address: string
-      expected_amount: number
-      chain: string
-      token: string
-      instructions?: Record<string, unknown>
-      chain_id?: number
+    if (bounty.currency !== 'USDC') {
+      return NextResponse.json({ error: 'Crypto funding requires bounty currency USDC' }, { status: 400 })
     }
 
+    const platformFeePercent = Number(process.env.PLATFORM_FEE_PERCENTAGE || '5')
+    const bountyAmount = Number(bounty.total_budget)
+    const platformFee = (bountyAmount * platformFeePercent) / 100
+    const totalAmount = Number((bountyAmount + platformFee).toFixed(6))
+
+    let escrowAddress: string
+    let instructions: Record<string, unknown>
+
     if (chain === 'solana') {
-      // Use Solana payment service
       const result = await solanaPayment.initializeDeposit({
         bountyId: bounty_id,
         funderWallet: wallet_address,
         amount: totalAmount,
       })
 
-      if (!result.success) {
-        return NextResponse.json({ error: result.error }, { status: 503 })
+      if (!result.success || !result.escrowPDA || !result.depositAddress || !result.expectedAmount) {
+        return NextResponse.json({ error: result.error || 'Unable to initialize Solana escrow' }, { status: 503 })
       }
 
-      escrowDetails = {
-        escrow_address: result.escrowPDA!,
-        deposit_address: result.depositAddress!,
-        expected_amount: totalAmount,
-        chain: 'solana',
-        token: 'USDC',
-        instructions: solanaPayment.getDepositInstructions(result.depositAddress!, result.expectedAmount!),
-      }
+      escrowAddress = result.escrowPDA
+      instructions = solanaPayment.getDepositInstructions(result.depositAddress, result.expectedAmount)
     } else {
-      // Use Base CDP payment service
       const result = await baseCDPPayment.initializeDeposit({
         bountyId: bounty_id,
         funderWallet: wallet_address,
         amount: totalAmount,
       })
 
-      if (!result.success) {
-        return NextResponse.json({ error: result.error }, { status: 503 })
+      if (!result.success || !result.escrowAddress || !result.depositAddress) {
+        return NextResponse.json({ error: result.error || 'Unable to initialize Base escrow' }, { status: 503 })
       }
 
-      escrowDetails = {
-        escrow_address: result.escrowAddress!,
-        deposit_address: result.depositAddress!,
-        expected_amount: totalAmount,
-        chain: 'base',
-        token: 'USDC',
-        chain_id: result.chainId,
-        instructions: baseCDPPayment.getDepositInstructions(result.depositAddress!, totalAmount),
-      }
+      escrowAddress = result.escrowAddress
+      instructions = baseCDPPayment.getDepositInstructions(result.depositAddress, totalAmount)
     }
 
-    // Create escrow record
+    const upsertPayload =
+      chain === 'solana'
+        ? {
+            bounty_id,
+            payment_method: getPaymentMethod(chain),
+            total_amount: totalAmount,
+            currency: 'USDC' as const,
+            status: 'pending' as const,
+            solana_escrow_pda: escrowAddress,
+            base_contract_address: null,
+          }
+        : {
+            bounty_id,
+            payment_method: getPaymentMethod(chain),
+            total_amount: totalAmount,
+            currency: 'USDC' as const,
+            status: 'pending' as const,
+            solana_escrow_pda: null,
+            base_contract_address: escrowAddress,
+          }
+
     const { data: escrow, error: escrowError } = await supabase
       .from('escrows')
-      .upsert({
-        bounty_id,
-        payment_method: chain,
-        escrow_address: escrowDetails.escrow_address,
-        deposit_address: escrowDetails.deposit_address,
-        total_amount: totalAmount,
-        platform_fee: platformFee,
-        currency: 'USDC',
-        status: 'awaiting_deposit',
-        chain_data: {
-          chain,
-          token: 'USDC',
-          funder_wallet: wallet_address,
-        },
-      })
-      .select()
+      .upsert(upsertPayload, { onConflict: 'bounty_id' })
+      .select('*')
       .single()
 
-    if (escrowError) {
-      console.error('Error creating escrow:', escrowError)
+    if (escrowError || !escrow) {
       return NextResponse.json({ error: 'Failed to create escrow record' }, { status: 500 })
     }
 
-    // Log activity
+    await supabase
+      .from('bounties')
+      .update({
+        payment_method: getPaymentMethod(chain),
+        state: 'funding_escrow',
+      })
+      .eq('id', bounty_id)
+
     await supabase.from('activity_logs').insert({
       user_id: user.id,
       bounty_id,
       action: 'crypto_escrow_created',
-      details: { 
+      details: {
         chain,
-        escrow_address: escrowDetails.escrow_address,
+        payment_method: getPaymentMethod(chain),
+        escrow_address: escrowAddress,
         amount: totalAmount,
+        platform_fee: platformFee,
       },
     })
 
     return NextResponse.json({
       escrow_id: escrow.id,
-      deposit_address: escrowDetails.deposit_address,
+      escrow_address: escrowAddress,
       expected_amount: totalAmount,
       platform_fee: platformFee,
       chain,
       token: 'USDC',
-      instructions: chain === 'solana' 
-        ? `Send ${totalAmount} USDC to ${escrowDetails.deposit_address} on Solana`
-        : `Send ${totalAmount} USDC to ${escrowDetails.deposit_address} on Base`,
+      instructions,
+      status: 'pending_deposit',
     })
   } catch (error) {
     console.error('Error in POST /api/payments/crypto:', error)
@@ -183,26 +190,28 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient()
-    
-    // Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    const { escrow_id, tx_hash } = body
-
-    if (!escrow_id || !tx_hash) {
-      return NextResponse.json({ error: 'Missing escrow_id or tx_hash' }, { status: 400 })
+    const validationResult = confirmCryptoEscrowSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json({ error: 'Invalid request payload' }, { status: 400 })
     }
 
-    // Get escrow record
+    const { escrow_id, tx_hash } = validationResult.data
+
     const { data: escrow, error: escrowError } = await supabase
       .from('escrows')
       .select(`
         *,
-        bounty:bounties!escrows_bounty_id_fkey(id, funder_id)
+        bounty:bounties!escrows_bounty_id_fkey(id, funder_id, state)
       `)
       .eq('id', escrow_id)
       .single()
@@ -211,88 +220,89 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Escrow not found' }, { status: 404 })
     }
 
-    if (escrow.bounty.funder_id !== user.id) {
+    const escrowBounty = Array.isArray(escrow.bounty) ? escrow.bounty[0] : escrow.bounty
+    if (!escrowBounty) {
+      return NextResponse.json({ error: 'Linked bounty not found for escrow' }, { status: 404 })
+    }
+
+    if (escrowBounty.funder_id !== user.id) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
-    // Verify the transaction on-chain using the appropriate service
-    const chain = escrow.payment_method
-    let verificationResult: { success: boolean; txHash?: string; error?: string }
-
-    if (chain === 'solana') {
-      verificationResult = await solanaPayment.verifyDeposit(tx_hash, escrow.total_amount)
-    } else if (chain === 'base') {
-      verificationResult = await baseCDPPayment.verifyDeposit(tx_hash, escrow.total_amount)
-    } else {
-      return NextResponse.json({ error: 'Unknown chain' }, { status: 400 })
+    if (escrow.status !== 'pending') {
+      return NextResponse.json({ error: `Escrow is already ${escrow.status}` }, { status: 400 })
     }
+
+    const chain = escrow.payment_method === 'solana_usdc' ? 'solana' : escrow.payment_method === 'base_usdc' ? 'base' : null
+    if (!chain) {
+      return NextResponse.json({ error: 'Escrow payment method is not crypto' }, { status: 400 })
+    }
+
+    const verificationResult =
+      chain === 'solana'
+        ? await solanaPayment.verifyDeposit(tx_hash, Number(escrow.total_amount))
+        : await baseCDPPayment.verifyDeposit(tx_hash, Number(escrow.total_amount))
 
     if (!verificationResult.success) {
-      return NextResponse.json({ 
-        error: verificationResult.error || 'Transaction verification failed' 
-      }, { status: 400 })
+      return NextResponse.json(
+        { error: verificationResult.error || 'Transaction verification failed' },
+        { status: 400 }
+      )
     }
 
-    // Build explorer URL for the transaction
-    const explorerUrl = chain === 'base' 
-      ? getExplorerTxUrl(tx_hash, 'mainnet')
-      : `https://solscan.io/tx/${tx_hash}`
+    const explorerUrl =
+      chain === 'base'
+        ? getExplorerTxUrl(tx_hash, process.env.BASE_NETWORK === 'base-sepolia' ? 'sepolia' : 'mainnet')
+        : `https://solscan.io/tx/${tx_hash}`
 
-    // Update escrow status
+    const escrowUpdate =
+      chain === 'solana'
+        ? {
+            status: 'locked' as const,
+            locked_at: new Date().toISOString(),
+            solana_transaction_signature: tx_hash,
+          }
+        : {
+            status: 'locked' as const,
+            locked_at: new Date().toISOString(),
+            base_transaction_hash: tx_hash,
+          }
+
     const { error: updateError } = await supabase
       .from('escrows')
-      .update({ 
-        status: 'funded',
-        funded_at: new Date().toISOString(),
-        chain_data: {
-          ...escrow.chain_data,
-          deposit_tx_hash: tx_hash,
-          explorer_url: explorerUrl,
-          verified_at: new Date().toISOString(),
-        },
-      })
+      .update(escrowUpdate)
       .eq('id', escrow_id)
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    // Transition bounty to bidding
     await supabase
       .from('bounties')
       .update({
         state: 'bidding',
-        state_history: supabase.rpc('append_to_json_array', {
-          current_array: 'state_history',
-          new_item: { 
-            state: 'funding_escrow', 
-            timestamp: new Date().toISOString(), 
-            by: user.id,
-          },
-        }),
+        funded_at: new Date().toISOString(),
       })
-      .eq('id', escrow.bounty_id)
+      .eq('id', escrowBounty.id)
 
-    // Create notification
     await supabase.from('notifications').insert({
       user_id: user.id,
-      type: 'crypto_deposit_confirmed',
+      type: 'payment_received',
       title: 'Crypto Deposit Confirmed',
-      message: 'Your bounty is now live and accepting proposals',
-      data: { 
-        bounty_id: escrow.bounty_id, 
+      message: 'Your bounty is now live and accepting proposals.',
+      data: {
+        bounty_id: escrow.bounty_id,
         tx_hash,
         chain,
         explorer_url: explorerUrl,
       },
     })
 
-    // Log activity
     await supabase.from('activity_logs').insert({
       user_id: user.id,
       bounty_id: escrow.bounty_id,
       action: 'crypto_deposit_confirmed',
-      details: { 
+      details: {
         escrow_id,
         tx_hash,
         chain,
@@ -300,9 +310,9 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Deposit confirmed, bounty is now live',
+    return NextResponse.json({
+      success: true,
+      message: 'Deposit confirmed. Bounty is now live.',
       tx_hash,
       explorer_url: explorerUrl,
     })

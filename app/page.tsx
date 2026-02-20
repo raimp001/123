@@ -14,8 +14,8 @@ export default function HomePage() {
         </h1>
         
         <p className="text-lg text-muted-foreground max-w-lg mx-auto mb-12">
-          Post a bounty. Verified labs compete. 
-          Funds release only when results are proven.
+          Post a bounty. OpenClaw pre-screens risk. Admin approves ethics.
+          Verified labs compete and payouts release only on proof.
         </p>
 
         <div className="flex items-center justify-center gap-4">
@@ -41,9 +41,9 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-12 md:gap-8">
             {[
               { n: "01", title: "Post", desc: "Describe your research question and set a budget." },
-              { n: "02", title: "Compete", desc: "Verified labs submit proposals. You pick the best." },
-              { n: "03", title: "Prove", desc: "Labs deliver evidence at each milestone." },
-              { n: "04", title: "Pay", desc: "Funds release only on verified proof." },
+              { n: "02", title: "Review", desc: "OpenClaw + admin ethics checks approve safe bounties." },
+              { n: "03", title: "Compete", desc: "Verified labs submit proposals. You pick the best." },
+              { n: "04", title: "Prove & Pay", desc: "Milestones unlock escrow only after verified evidence." },
             ].map((s) => (
               <div key={s.n}>
                 <p className="text-xs text-muted-foreground/40 font-mono mb-3">{s.n}</p>
@@ -72,7 +72,7 @@ export default function HomePage() {
             <div className="space-y-4">
               {[
                 { label: "Verification tiers", desc: "Basic, Verified, Trusted, Institutional" },
-                { label: "On-chain escrow", desc: "Funds held securely until milestones verified" },
+                { label: "Hybrid escrow", desc: "USD via Stripe, USDC via Base/Solana with proof-gated release" },
                 { label: "IPFS evidence", desc: "Tamper-proof research data storage" },
               ].map((item) => (
                 <div key={item.label} className="py-4 border-b border-border/30 last:border-0">

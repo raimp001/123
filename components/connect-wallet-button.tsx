@@ -190,7 +190,7 @@ export function ConnectWalletButton({ variant = 'default' }: ConnectWalletButton
     return (
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" className="rounded-full text-xs px-3 gap-1.5" onClick={() => { connectBase(0); setShowOptions(false) }} disabled={isLoading}>
-          <div className="w-3 h-3 rounded-full bg-blue-500" /> Base
+          <div className="w-3 h-3 rounded-full bg-blue-500" /> Coinbase Smart Wallet
         </Button>
         <Button variant="outline" size="sm" className="rounded-full text-xs px-3 gap-1.5" onClick={() => { connectSolana(); setShowOptions(false) }} disabled={isLoading}>
           <div className="w-3 h-3 rounded-full bg-purple-500" /> Solana

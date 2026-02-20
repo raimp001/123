@@ -77,7 +77,7 @@ export async function PATCH(
     }
 
     // Only allow updates in drafting state (with some exceptions)
-    const allowedStates = ['drafting', 'ready_for_funding']
+    const allowedStates = ['drafting', 'admin_review', 'ready_for_funding']
     if (!allowedStates.includes(currentBounty.state)) {
       return NextResponse.json(
         { error: 'Cannot update bounty in current state' },

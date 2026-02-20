@@ -7,6 +7,8 @@ A decentralized science (DeSci) platform connecting research funders with verifi
 - **Research Bounties** - Create and manage research bounties with milestone-based payouts
 - **Lab Verification** - Tiered verification system (Basic, Verified, Trusted, Institutional)
 - **Proposal System** - Labs submit proposals to compete for bounties
+- **Admin Ethics Gate** - Every bounty passes admin safety/ethics approval before funding
+- **OpenClaw Orchestration** - Automated pre-screening signals (harm, ethics, quality) to accelerate admin review
 - **Milestone Tracking** - Track research progress with deliverables and verification
 - **Multi-Currency Payments** - Support for USD (Stripe), Solana USDC, and Base USDC
 - **Escrow System** - Secure fund management with milestone-based releases
@@ -54,6 +56,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 See `docs/SETUP.md` for complete setup instructions including payment providers.
+For the hardened architecture and risk model, see `docs/SECURITY-HARDENING-AND-IDEAL-FLOW.md`.
 
 ## Project Structure
 

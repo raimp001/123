@@ -19,6 +19,7 @@ import Link from "next/link"
 
 const stateColors: Record<string, string> = {
   drafting: "bg-secondary text-muted-foreground",
+  admin_review: "bg-violet-500/20 text-violet-300 border border-violet-500/30",
   funding_escrow: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
   bidding: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
   active_research: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
@@ -30,6 +31,7 @@ const stateColors: Record<string, string> = {
 
 const stateLabels: Record<string, string> = {
   drafting: "Draft",
+  admin_review: "Admin Review",
   funding_escrow: "Funding",
   bidding: "Bidding",
   active_research: "Active",
@@ -106,6 +108,7 @@ export default function BountiesPage() {
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
             <SelectItem value="drafting">Draft</SelectItem>
+            <SelectItem value="admin_review">Admin Review</SelectItem>
             <SelectItem value="funding_escrow">Funding</SelectItem>
             <SelectItem value="bidding">Bidding</SelectItem>
             <SelectItem value="active_research">Active</SelectItem>
