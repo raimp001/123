@@ -258,6 +258,7 @@ interface CreateBountyData {
   methodology: string
   data_requirements?: string[]
   quality_standards?: string[]
+  ethics_approval?: string
   total_budget: number
   currency?: 'USD' | 'USDC'
   deadline?: string

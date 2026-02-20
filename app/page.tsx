@@ -3,6 +3,11 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 
 export default function HomePage() {
+  const deployMarker =
+    process.env.VERCEL_DEPLOYMENT_ID?.slice(0, 12) ??
+    process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ??
+    "local-dev"
+
   return (
     <div className="bg-background text-foreground">
 
@@ -109,9 +114,10 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-border/30 py-8">
-        <p className="text-xs text-center text-muted-foreground/40">
-          © 2026 SciFlow
-        </p>
+        <div className="space-y-1">
+          <p className="text-xs text-center text-muted-foreground/40">© 2026 SciFlow</p>
+          <p className="text-[11px] text-center text-muted-foreground/35 font-mono">Build {deployMarker}</p>
+        </div>
       </footer>
     </div>
   )

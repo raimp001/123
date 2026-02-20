@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from 'react'
+import { use, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBounty } from '@/hooks/use-bounties'
 import { useAuth } from '@/contexts/auth-context'
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 import { stateMetadata } from '@/lib/machines/bounty-machine'
 import { 
   ArrowLeft, 
@@ -22,12 +23,40 @@ import {
   Wallet,
   FlaskConical,
   Target,
-  Calendar
+  Calendar,
+  Bot,
+  ShieldAlert,
+  ShieldCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  extractOpenClawReview,
+  getOpenClawRiskLevel,
+  openClawDecisionLabel,
+  openClawSignalTypeLabel,
+  type OpenClawRiskLevel,
+} from '@/lib/openclaw-review'
 
 interface PageProps {
   params: Promise<{ id: string }>
+}
+
+const riskBadgeClass: Record<OpenClawRiskLevel, string> = {
+  low: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+  medium: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+  high: 'bg-red-500/10 text-red-400 border border-red-500/20',
+}
+
+const signalBadgeClass = {
+  low: 'border-emerald-500/30 text-emerald-300',
+  medium: 'border-amber-500/30 text-amber-300',
+  high: 'border-red-500/30 text-red-300',
+}
+
+function riskLabel(level: OpenClawRiskLevel) {
+  if (level === 'high') return 'High'
+  if (level === 'medium') return 'Medium'
+  return 'Low'
 }
 
 export default function BountyDetailPage({ params }: PageProps) {
@@ -35,14 +64,19 @@ export default function BountyDetailPage({ params }: PageProps) {
   const router = useRouter()
   const { user, isAdmin } = useAuth()
   const { bounty, isLoading, error, transition } = useBounty(id)
+  const [adminReviewNote, setAdminReviewNote] = useState('')
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
   const handleTransition = async (event: string, data?: Record<string, unknown>) => {
+    setIsTransitioning(true)
     const result = await transition(event, data)
     if (result.success) {
       toast.success(`State changed to ${result.newState}`)
+      setAdminReviewNote('')
     } else {
       toast.error(result.error || 'Failed to transition state')
     }
+    setIsTransitioning(false)
   }
 
   if (isLoading) {
@@ -79,6 +113,8 @@ export default function BountyDetailPage({ params }: PageProps) {
   const stateMeta = stateMetadata[bounty.state as keyof typeof stateMetadata]
   const completedMilestones = bounty.milestones?.filter(m => m.status === 'verified').length || 0
   const totalMilestones = bounty.milestones?.length || 0
+  const openClawReview = useMemo(() => extractOpenClawReview(bounty.state_history), [bounty.state_history])
+  const openClawRisk = useMemo(() => getOpenClawRiskLevel(openClawReview), [openClawReview])
 
   return (
     <div className="space-y-6">
@@ -117,30 +153,21 @@ export default function BountyDetailPage({ params }: PageProps) {
         {/* Action Buttons based on state */}
         <div className="flex gap-2">
           {isOwner && bounty.state === 'drafting' && (
-            <Button onClick={() => handleTransition('SUBMIT_DRAFT')} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
+            <Button
+              disabled={isTransitioning}
+              onClick={() => handleTransition('SUBMIT_DRAFT')}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+            >
               <Send className="w-4 h-4 mr-2" />
               Submit for Admin Review
             </Button>
           )}
-          {isAdmin && bounty.state === 'admin_review' && (
-            <>
-              <Button
-                variant="outline"
-                className="border-border text-foreground hover:bg-secondary rounded-full"
-                onClick={() => handleTransition('ADMIN_REQUEST_CHANGES')}
-              >
-                Request Changes
-              </Button>
-              <Button
-                onClick={() => handleTransition('ADMIN_APPROVE_PROTOCOL')}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
-              >
-                Approve for Funding
-              </Button>
-            </>
-          )}
           {isOwner && bounty.state === 'ready_for_funding' && (
-            <Button onClick={() => handleTransition('INITIATE_FUNDING', { paymentMethod: 'stripe' })} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
+            <Button
+              disabled={isTransitioning}
+              onClick={() => handleTransition('INITIATE_FUNDING', { paymentMethod: 'stripe' })}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+            >
               <Wallet className="w-4 h-4 mr-2" />
               Fund Bounty
             </Button>
@@ -155,6 +182,7 @@ export default function BountyDetailPage({ params }: PageProps) {
             <>
               <Button 
                 variant="outline"
+                disabled={isTransitioning}
                 className="border-border text-foreground hover:bg-secondary rounded-full"
                 onClick={() => handleTransition('REQUEST_REVISION', { 
                   milestoneId: bounty.milestones?.find(m => m.status === 'submitted')?.id 
@@ -162,9 +190,13 @@ export default function BountyDetailPage({ params }: PageProps) {
               >
                 Request Revision
               </Button>
-              <Button onClick={() => handleTransition('APPROVE_MILESTONE', { 
-                milestoneId: bounty.milestones?.find(m => m.status === 'submitted')?.id 
-              })} className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
+              <Button
+                disabled={isTransitioning}
+                onClick={() => handleTransition('APPROVE_MILESTONE', { 
+                  milestoneId: bounty.milestones?.find(m => m.status === 'submitted')?.id 
+                })}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+              >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Approve Milestone
               </Button>
@@ -244,6 +276,119 @@ export default function BountyDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* OpenClaw Review */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="text-lg text-foreground flex items-center gap-2">
+            <Bot className="w-5 h-5 text-violet-400" />
+            OpenClaw Agent Review
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Automated safety + quality screening used to prioritize admin decisions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {openClawReview ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="border-violet-500/30 text-violet-300">
+                  Decision: {openClawDecisionLabel(openClawReview.decision)}
+                </Badge>
+                {typeof openClawReview.score === 'number' && (
+                  <Badge variant="outline" className="border-border text-muted-foreground">
+                    Score: {openClawReview.score}
+                  </Badge>
+                )}
+                {openClawRisk && (
+                  <Badge className={riskBadgeClass[openClawRisk]}>
+                    {riskLabel(openClawRisk)} Risk
+                  </Badge>
+                )}
+                {openClawReview.traceId && (
+                  <Badge variant="outline" className="font-mono text-xs border-border text-muted-foreground">
+                    Trace: {openClawReview.traceId}
+                  </Badge>
+                )}
+              </div>
+
+              {openClawReview.signals.length > 0 ? (
+                <div className="space-y-2">
+                  {openClawReview.signals.map((signal, index) => (
+                    <div key={`${signal.type}-${index}`} className="rounded-lg border border-border/60 bg-secondary/30 px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className={signalBadgeClass[signal.severity]}>
+                          {openClawSignalTypeLabel(signal.type)}
+                        </Badge>
+                        <Badge variant="outline" className={signalBadgeClass[signal.severity]}>
+                          {signal.severity}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">{signal.message}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-300 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  No risk signals detected by OpenClaw.
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-lg border border-border/60 bg-secondary/20 px-3 py-3 text-sm text-muted-foreground flex items-start gap-2">
+              <ShieldAlert className="w-4 h-4 mt-0.5 text-amber-400" />
+              OpenClaw review metadata was not found in this bounty's state history.
+            </div>
+          )}
+
+          {bounty.ethics_approval && (
+            <div className="rounded-lg border border-border/60 bg-secondary/20 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Submitter Ethics Notes</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{bounty.ethics_approval}</p>
+            </div>
+          )}
+
+          {isAdmin && bounty.state === 'admin_review' && (
+            <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4 space-y-3">
+              <p className="text-sm text-violet-200 font-medium">Admin Triage Action</p>
+              <Textarea
+                value={adminReviewNote}
+                onChange={(event) => setAdminReviewNote(event.target.value)}
+                placeholder="Add review notes for requester (optional)"
+                className="min-h-[88px]"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  disabled={isTransitioning}
+                  className="border-border text-foreground hover:bg-secondary rounded-full"
+                  onClick={() =>
+                    handleTransition(
+                      'ADMIN_REQUEST_CHANGES',
+                      adminReviewNote.trim() ? { note: adminReviewNote.trim() } : undefined
+                    )
+                  }
+                >
+                  Request Changes
+                </Button>
+                <Button
+                  disabled={isTransitioning}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full"
+                  onClick={() =>
+                    handleTransition(
+                      'ADMIN_APPROVE_PROTOCOL',
+                      adminReviewNote.trim() ? { note: adminReviewNote.trim() } : undefined
+                    )
+                  }
+                >
+                  Approve for Funding
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* State Machine Visualization */}
       <StateMachineVisualizer
@@ -450,22 +595,36 @@ export default function BountyDetailPage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {(bounty.state_history as Array<{ from_state?: string; to_state: string; timestamp: string }> || []).reverse().map((entry, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-accent mt-2" />
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {entry.from_state 
-                          ? `${stateMetadata[entry.from_state as keyof typeof stateMetadata]?.label || entry.from_state} → ${stateMetadata[entry.to_state as keyof typeof stateMetadata]?.label || entry.to_state}`
-                          : stateMetadata[entry.to_state as keyof typeof stateMetadata]?.label || entry.to_state
-                        }
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(entry.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                {(
+                  bounty.state_history as Array<{
+                    from_state?: string
+                    to_state?: string
+                    state?: string
+                    timestamp: string
+                  }>
+                )
+                  .slice()
+                  .reverse()
+                  .map((entry, index) => {
+                    const toState = entry.to_state || entry.state || 'unknown'
+                    const fromState = entry.from_state
+
+                    return (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className="w-2 h-2 rounded-full bg-accent mt-2" />
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {fromState
+                              ? `${stateMetadata[fromState as keyof typeof stateMetadata]?.label || fromState} → ${stateMetadata[toState as keyof typeof stateMetadata]?.label || toState}`
+                              : stateMetadata[toState as keyof typeof stateMetadata]?.label || toState}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(entry.timestamp).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
               </div>
             </CardContent>
           </Card>

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Sheet,
   SheetContent,
@@ -25,18 +26,21 @@ import {
   Plus,
   FileText,
   DollarSign,
-  Calendar,
   Milestone,
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
   Trash2,
   FlaskConical,
-  Loader2
+  Loader2,
+  Bot,
+  ShieldAlert,
+  ShieldCheck
 } from "lucide-react"
 import { useCreateBounty } from "@/hooks/use-bounties"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { runOpenClawReview } from "@/lib/agents/openclaw-orchestrator"
 
 type Step = "basics" | "protocol" | "milestones" | "review"
 
@@ -62,6 +66,8 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
   const [currency, setCurrency] = useState<"USD" | "USDC">("USDC")
   const [methodology, setMethodology] = useState("")
   const [dataRequirements, setDataRequirements] = useState("")
+  const [qualityStandards, setQualityStandards] = useState("")
+  const [ethicsNotes, setEthicsNotes] = useState("")
   const [milestones, setMilestones] = useState<MilestoneInput[]>([
     { id: "1", title: "", description: "", percentage: 25, daysToComplete: 30 }
   ])
@@ -109,6 +115,38 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
       .map((line) => line.trim())
       .filter(Boolean)
 
+  const parsedDataRequirements = useMemo(() => parseLines(dataRequirements), [dataRequirements])
+  const parsedQualityStandards = useMemo(() => parseLines(qualityStandards), [qualityStandards])
+
+  const openClawPreview = useMemo(
+    () =>
+      runOpenClawReview({
+        title: title.trim() || "Untitled bounty",
+        description: description.trim(),
+        methodology: methodology.trim(),
+        dataRequirements: parsedDataRequirements,
+        qualityStandards: parsedQualityStandards,
+        totalBudget: budgetNumber,
+        currency,
+        milestones: milestones.map((milestone) => ({
+          title: milestone.title || `Milestone ${milestone.id}`,
+          description: milestone.description || "Deliver milestone evidence",
+          deliverables: parseLines(milestone.description).slice(0, 5),
+          payoutPercentage: milestone.percentage,
+        })),
+      }),
+    [
+      title,
+      description,
+      methodology,
+      parsedDataRequirements,
+      parsedQualityStandards,
+      budgetNumber,
+      currency,
+      milestones,
+    ]
+  )
+
   const handleNext = () => {
     const nextIndex = currentStepIndex + 1
     if (nextIndex < steps.length) {
@@ -129,8 +167,18 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
       return
     }
 
+    if (parsedQualityStandards.length === 0) {
+      toast.error("Please add at least one quality standard")
+      return
+    }
+
     if (Math.abs(totalPercentage - 100) > 0.01) {
       toast.error("Milestone percentages must add up to 100%")
+      return
+    }
+
+    if (openClawPreview.decision === "reject") {
+      toast.error("OpenClaw flagged this bounty as high risk. Revise before submitting.")
       return
     }
 
@@ -138,15 +186,16 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
       title: title.trim(),
       description: description.trim(),
       methodology: methodology.trim(),
-      data_requirements: parseLines(dataRequirements),
-      quality_standards: parseLines(dataRequirements),
+      data_requirements: parsedDataRequirements,
+      quality_standards: parsedQualityStandards,
+      ethics_approval: ethicsNotes.trim() || undefined,
       total_budget: budgetNumber,
       currency,
       tags: category ? [category] : [],
       milestones: milestones.map((milestone) => ({
         title: milestone.title || `Milestone ${milestone.id}`,
         description: milestone.description || "Deliver milestone evidence",
-        deliverables: parseLines(milestone.description || "").slice(0, 5),
+        deliverables: parseLines(milestone.description).slice(0, 5),
         payout_percentage: milestone.percentage,
       })),
     })
@@ -224,11 +273,11 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
             </div>
             <div>
               <label className="text-sm font-medium text-navy-800 dark:text-white">Description</label>
-              <textarea 
+              <Textarea
                 placeholder="Describe the research objectives and expected outcomes..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="mt-1 w-full h-32 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none"
+                className="mt-1 min-h-[132px]"
               />
             </div>
             <div>
@@ -283,26 +332,43 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
           <div className="space-y-6">
             <div>
               <label className="text-sm font-medium text-navy-800 dark:text-white">Methodology</label>
-              <textarea 
+              <Textarea
                 placeholder="Describe the required research methodology..."
                 value={methodology}
                 onChange={(e) => setMethodology(e.target.value)}
-                className="mt-1 w-full h-32 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none"
+                className="mt-1 min-h-[132px]"
               />
             </div>
             <div>
               <label className="text-sm font-medium text-navy-800 dark:text-white">Data Requirements</label>
-              <textarea 
-                placeholder="List the data formats, quality standards, and deliverables expected..."
+              <Textarea
+                placeholder="List required datasets, formats, and expected artifacts (one item per line)..."
                 value={dataRequirements}
                 onChange={(e) => setDataRequirements(e.target.value)}
-                className="mt-1 w-full h-32 px-3 py-2 rounded-md border border-input bg-background text-sm resize-none"
+                className="mt-1 min-h-[112px]"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-navy-800 dark:text-white">Quality Standards</label>
+              <Textarea
+                placeholder="Define acceptance criteria and validation checks (one item per line)..."
+                value={qualityStandards}
+                onChange={(e) => setQualityStandards(e.target.value)}
+                className="mt-1 min-h-[112px]"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-navy-800 dark:text-white">Ethics & Safety Notes (Optional)</label>
+              <Textarea
+                placeholder="Document sensitive considerations, prohibited use, and required safeguards..."
+                value={ethicsNotes}
+                onChange={(e) => setEthicsNotes(e.target.value)}
+                className="mt-1 min-h-[112px]"
               />
             </div>
             <Card className="border-0 bg-amber-50 dark:bg-amber-900/20 border-amber-200">
               <CardContent className="p-4 text-sm text-amber-700 dark:text-amber-400">
-                <strong>Tip:</strong> Be specific about requirements. Clear protocols reduce disputes 
-                and help labs provide accurate bids.
+                <strong>Tip:</strong> Better structure improves OpenClaw screening quality and reduces back-and-forth during admin review.
               </CardContent>
             </Card>
           </div>
@@ -409,6 +475,18 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
                       {milestones.length}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-muted-foreground">Data Requirements</p>
+                    <p className="text-lg font-semibold text-navy-800 dark:text-white">
+                      {parsedDataRequirements.length}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Quality Standards</p>
+                    <p className="text-lg font-semibold text-navy-800 dark:text-white">
+                      {parsedQualityStandards.length}
+                    </p>
+                  </div>
                 </div>
 
                 <Separator />
@@ -424,20 +502,82 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
                     </div>
                   ))}
                 </div>
+
+                {ethicsNotes.trim() && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="font-medium text-navy-800 dark:text-white mb-1">Ethics & Safety Notes</p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{ethicsNotes.trim()}</p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card
+              className={`border ${
+                openClawPreview.decision === "reject"
+                  ? "border-red-500/30 bg-red-500/5"
+                  : openClawPreview.decision === "manual_review"
+                    ? "border-amber-500/30 bg-amber-500/5"
+                    : "border-emerald-500/30 bg-emerald-500/5"
+              }`}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Bot className="w-4 h-4" />
+                  OpenClaw Pre-Screen
+                </CardTitle>
+                <CardDescription>
+                  This preview estimates how your bounty will be triaged during admin review.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">
+                    Decision: {openClawPreview.decision === "manual_review" ? "Manual Review" : openClawPreview.decision === "allow" ? "Allow" : "Reject"}
+                  </Badge>
+                  <Badge variant="outline">Score: {openClawPreview.score}</Badge>
+                  <Badge variant="outline">Signals: {openClawPreview.signals.length}</Badge>
+                </div>
+
+                {openClawPreview.signals.length > 0 ? (
+                  <div className="space-y-2">
+                    {openClawPreview.signals.map((signal, index) => (
+                      <div key={`${signal.type}-${index}`} className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
+                        <p className="text-sm font-medium capitalize">{signal.type} · {signal.severity}</p>
+                        <p className="text-sm text-muted-foreground">{signal.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-emerald-300 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    No OpenClaw risk signals detected.
+                  </div>
+                )}
+
+                {openClawPreview.decision === "reject" && (
+                  <div className="text-sm text-red-300 flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4" />
+                    Submission blocked until high-risk content is revised.
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             <Button
               className="w-full bg-amber-500 hover:bg-amber-400 text-navy-900"
               onClick={handleCreate}
-              disabled={isCreating}
+              disabled={isCreating || openClawPreview.decision === "reject"}
             >
               {isCreating ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <DollarSign className="w-4 h-4 mr-2" />
               )}
-              Create Bounty (Admin Review)
+              Create Bounty (Admin + OpenClaw Review)
             </Button>
           </div>
         )}
