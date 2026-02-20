@@ -1,189 +1,119 @@
 "use client"
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar"
-import { 
-  Home, 
-  FlaskConical, 
-  FileText, 
-  Users, 
-  Settings, 
-  UserCircle, 
-  LifeBuoy,
-  Wallet,
-  Scale,
-  BarChart3,
-  ShieldCheck,
-  CircleDollarSign
-} from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useSidebar } from "@/components/ui/sidebar"
-import { SciFlowLogo } from "@/components/sciflow-logo"
+import {
+  Home,
+  FileText,
+  FlaskConical,
+  CircleDollarSign,
+  Wallet,
+  Settings,
+  Scale,
+  Sparkles,
+} from "lucide-react"
 import { ConnectWalletButton } from "@/components/connect-wallet-button"
+import { useSidebar } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 
-// SciFlow Navigation Items
-const funderMenuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "My Bounties", url: "/dashboard/bounties", icon: FileText },
-  { title: "Browse Labs", url: "/dashboard/labs", icon: FlaskConical },
-  { title: "Escrow", url: "/dashboard/escrow", icon: Wallet },
+const navItems = [
+  { title: "Dashboard",      url: "/dashboard",               icon: Home },
+  { title: "My Bounties",    url: "/dashboard/bounties",      icon: FileText },
+  { title: "Open Bounties",  url: "/dashboard/open-bounties", icon: CircleDollarSign },
+  { title: "Labs",           url: "/dashboard/labs",          icon: FlaskConical },
+  { title: "Proposals",      url: "/dashboard/proposals",     icon: FileText },
+  { title: "Escrow",         url: "/dashboard/escrow",        icon: Wallet },
+  { title: "Disputes",       url: "/dashboard/disputes",      icon: Scale },
+  { title: "Agent",          url: "/dashboard/agent",         icon: Sparkles },
 ]
 
-const labMenuItems = [
-  { title: "Open Bounties", url: "/dashboard/open-bounties", icon: CircleDollarSign },
-  { title: "My Proposals", url: "/dashboard/proposals", icon: FileText },
-  { title: "Active Research", url: "/dashboard/research", icon: FlaskConical },
-  { title: "Staking", url: "/dashboard/staking", icon: ShieldCheck },
-]
-
-const platformMenuItems = [
-  { title: "Analytics", url: "/dashboard/analytics", icon: BarChart3 },
-  { title: "Disputes", url: "/dashboard/disputes", icon: Scale },
-  { title: "Leaderboard", url: "/dashboard/leaderboard", icon: Users },
-]
-
-const accountMenuItems = [
-  { title: "Profile", url: "/profile", icon: UserCircle },
+const bottomItems = [
   { title: "Settings", url: "/settings", icon: Settings },
-  { title: "Help", url: "/help", icon: LifeBuoy },
 ]
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { state: sidebarState } = useSidebar()
+  const { state, toggleSidebar } = useSidebar()
+  const collapsed = state === "collapsed"
 
   return (
-    <Sidebar collapsible="icon" side="left" className="border-r-0">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="SciFlow Home" className="hover:bg-sidebar-accent">
-              <Link href="/" className="flex items-center">
-                <SciFlowLogo 
-                  size="sm"
-                  showText={sidebarState === "expanded"}
-                />
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      
-      <SidebarContent className="px-2">
-        {/* Funder Actions */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-amber-400/90 uppercase tracking-wider">
-            Funder
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {funderMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url))} 
-                    tooltip={item.title}
-                    className="text-slate-200 hover:text-white hover:bg-sidebar-accent data-[active=true]:bg-amber-500/25 data-[active=true]:text-amber-300 data-[active=true]:font-medium"
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-20 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200",
+        collapsed ? "w-14" : "w-52"
+      )}
+    >
+      {/* Logo / header */}
+      <div className="flex items-center h-14 border-b border-sidebar-border px-3 shrink-0">
+        <button
+          onClick={toggleSidebar}
+          className="flex items-center gap-2.5 w-full text-left group"
+          title="Toggle sidebar"
+        >
+          {/* Simple square logo mark */}
+          <div className="w-7 h-7 rounded-md bg-accent/20 flex items-center justify-center shrink-0">
+            <span className="text-xs font-bold text-accent">S</span>
+          </div>
+          {!collapsed && (
+            <span className="text-sm font-semibold text-sidebar-foreground tracking-tight">
+              SciFlow
+            </span>
+          )}
+        </button>
+      </div>
 
-        {/* Lab Actions */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-emerald-400/90 uppercase tracking-wider">
-            Lab / Researcher
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {labMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={pathname.startsWith(item.url)} 
-                    tooltip={item.title}
-                    className="text-slate-200 hover:text-white hover:bg-sidebar-accent data-[active=true]:bg-emerald-500/25 data-[active=true]:text-emerald-300 data-[active=true]:font-medium"
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+        {navItems.map((item) => {
+          const isActive =
+            item.url === "/dashboard"
+              ? pathname === item.url
+              : pathname.startsWith(item.url)
 
-        {/* Platform */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-sky-400/90 uppercase tracking-wider">
-            Platform
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {platformMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={pathname.startsWith(item.url)} 
-                    tooltip={item.title}
-                    className="text-slate-200 hover:text-white hover:bg-sidebar-accent data-[active=true]:bg-sky-500/25 data-[active=true]:text-sky-300 data-[active=true]:font-medium"
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      
-      <SidebarFooter className="border-t border-sidebar-border pt-2">
-        <SidebarMenu>
-          {accountMenuItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton 
-                asChild 
-                isActive={pathname === item.url} 
-                tooltip={item.title}
-                className="text-slate-300 hover:text-white hover:bg-sidebar-accent data-[active=true]:bg-slate-600/40 data-[active=true]:text-white data-[active=true]:font-medium"
-              >
-                <Link href={item.url}>
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-        
-        {/* Wallet connection */}
-        {sidebarState === "expanded" && (
-          <ConnectWalletButton variant="sidebar" />
-        )}
-      </SidebarFooter>
-    </Sidebar>
+          return (
+            <Link
+              key={item.url}
+              href={item.url}
+              title={collapsed ? item.title : undefined}
+              className={cn(
+                "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors duration-150",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              )}
+            >
+              <item.icon className="w-4 h-4 shrink-0" />
+              {!collapsed && <span>{item.title}</span>}
+            </Link>
+          )
+        })}
+      </nav>
+
+      {/* Footer */}
+      <div className="border-t border-sidebar-border px-2 py-3 space-y-0.5">
+        {bottomItems.map((item) => {
+          const isActive = pathname === item.url
+          return (
+            <Link
+              key={item.url}
+              href={item.url}
+              title={collapsed ? item.title : undefined}
+              className={cn(
+                "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors duration-150",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+              )}
+            >
+              <item.icon className="w-4 h-4 shrink-0" />
+              {!collapsed && <span>{item.title}</span>}
+            </Link>
+          )
+        })}
+
+        {/* Wallet */}
+        {!collapsed && <ConnectWalletButton variant="sidebar" />}
+      </div>
+    </aside>
   )
 }

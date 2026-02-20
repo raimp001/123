@@ -1,198 +1,159 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { 
-  Plus, 
-  ArrowRight,
-  FlaskConical,
-  Wallet,
-  Users,
-  AlertTriangle,
-  RefreshCw
-} from "lucide-react"
+import { Plus, ArrowRight, RefreshCw } from "lucide-react"
 import { CreateBountyModal } from "@/components/create-bounty-modal"
 import { useBounties } from "@/hooks/use-bounties"
 import Link from "next/link"
+import { useMemo } from "react"
 
 const stateColors: Record<string, string> = {
-  drafting: "bg-secondary text-muted-foreground",
-  funding_escrow: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
-  bidding: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-  active_research: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
-  milestone_review: "bg-orange-500/20 text-orange-400 border border-orange-500/30",
-  dispute_resolution: "bg-red-500/20 text-red-400 border border-red-500/30",
-  completed: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
-  cancelled: "bg-secondary text-muted-foreground",
+  drafting: "bg-secondary text-muted-foreground border-0",
+  funding_escrow: "bg-amber-500/15 text-amber-400 border-0",
+  bidding: "bg-blue-500/15 text-blue-400 border-0",
+  active_research: "bg-emerald-500/15 text-emerald-400 border-0",
+  milestone_review: "bg-orange-500/15 text-orange-400 border-0",
+  dispute_resolution: "bg-red-500/15 text-red-400 border-0",
+  completed: "bg-emerald-500/15 text-emerald-400 border-0",
+  cancelled: "bg-secondary text-muted-foreground border-0",
 }
 
 const stateLabels: Record<string, string> = {
   drafting: "Draft",
   funding_escrow: "Funding",
-  bidding: "Bidding",
+  bidding: "Open",
   active_research: "Active",
   milestone_review: "Review",
   dispute_resolution: "Dispute",
-  completed: "Completed",
+  completed: "Done",
   cancelled: "Cancelled",
 }
 
 function formatCurrency(amount: number, currency: string) {
-  return currency === "USD" 
-    ? `$${amount.toLocaleString()}` 
+  return currency === "USD"
+    ? `$${amount.toLocaleString()}`
     : `${amount.toLocaleString()} ${currency}`
 }
 
 export default function DashboardPage() {
-  const { bounties, isLoading, error, refresh } = useBounties({ limit: 6 })
+  const { bounties, isLoading, error, refresh } = useBounties({ limit: 8 })
 
-  const stats = {
-    active: bounties.filter(b => 
+  const stats = useMemo(() => ({
+    active: bounties.filter(b =>
       ["active_research", "milestone_review", "bidding", "funding_escrow"].includes(b.current_state)
     ).length,
     total: bounties.reduce((sum, b) => sum + (b.total_budget || 0), 0),
-    labs: new Set(bounties.filter(b => b.selected_lab_id).map(b => b.selected_lab_id)).size,
+    completed: bounties.filter(b => b.current_state === "completed").length,
     disputes: bounties.filter(b => b.current_state === "dispute_resolution").length,
-  }
+  }), [bounties])
 
   const hasError = error !== null
   const isEmpty = !isLoading && !hasError && bounties.length === 0
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-8 py-2">
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-serif text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage your research bounties</p>
-        </div>
+        <h1 className="text-xl font-medium text-foreground">Dashboard</h1>
         <CreateBountyModal />
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats — plain numbers, Scandinavian style */}
+      <div className="grid grid-cols-4 divide-x divide-border/40 border border-border/40 rounded-xl overflow-hidden">
         {[
-          { label: "Active", value: stats.active, icon: FlaskConical, color: "text-emerald-400" },
-          { label: "Total Value", value: formatCurrency(stats.total, "USD"), icon: Wallet, color: "text-accent" },
-          { label: "Labs", value: stats.labs, icon: Users, color: "text-blue-400" },
-          { label: "Disputes", value: stats.disputes, icon: AlertTriangle, color: "text-red-400" },
+          { label: "Active", value: stats.active },
+          { label: "Total value", value: formatCurrency(stats.total, "USD") },
+          { label: "Completed", value: stats.completed },
+          { label: "Disputes", value: stats.disputes },
         ].map((stat) => (
-          <Card 
-            key={stat.label} 
-            className="bg-card border-border rounded-xl"
-          >
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-                <p className="text-xl font-semibold text-foreground">{stat.value}</p>
-              </div>
-              <stat.icon className={`w-5 h-5 ${stat.color}`} />
-            </CardContent>
-          </Card>
+          <div key={stat.label} className="p-4 text-center">
+            <p className="text-lg font-medium text-foreground tabular-nums">{stat.value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+          </div>
         ))}
       </div>
 
-      {/* Bounties */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-foreground">Recent Bounties</h2>
+      {/* Recent bounties */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-muted-foreground">Recent bounties</p>
           <Link href="/dashboard/bounties">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              View All <ArrowRight className="w-4 h-4 ml-1" />
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground h-7 px-2">
+              All <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </Link>
         </div>
 
         {isLoading ? (
-          <div className="grid gap-3">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="bg-card border-border rounded-xl">
-                <CardContent className="p-4">
-                  <Skeleton className="h-5 w-3/4 mb-2 bg-secondary" />
-                  <Skeleton className="h-4 w-1/4 bg-secondary" />
-                </CardContent>
-              </Card>
+          <div className="divide-y divide-border/30 border border-border/40 rounded-xl overflow-hidden">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-4 p-4">
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-2/3 mb-2" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+                <Skeleton className="h-5 w-14 rounded-md" />
+              </div>
             ))}
           </div>
         ) : hasError ? (
-          <Card className="bg-card border-border rounded-xl">
-            <CardContent className="p-10 text-center">
-              <AlertTriangle className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
-              <p className="font-medium text-foreground mb-2">Unable to load bounties</p>
-              <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
-                Please check your connection or try again later.
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => refresh()}
-                className="border-border text-foreground hover:bg-secondary rounded-full"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" /> Retry
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="py-10 text-center border border-border/40 rounded-xl">
+            <p className="text-sm text-muted-foreground mb-3">Unable to load bounties</p>
+            <Button variant="outline" size="sm" onClick={() => refresh()} className="rounded-full">
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Retry
+            </Button>
+          </div>
         ) : isEmpty ? (
-          <Card className="bg-card border-border rounded-xl">
-            <CardContent className="p-10 text-center">
-              <FlaskConical className="w-10 h-10 mx-auto text-accent mb-4" />
-              <p className="font-semibold text-foreground mb-2">No bounties yet</p>
-              <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                Create your first research bounty to get started.
-              </p>
-              <CreateBountyModal 
-                trigger={
-                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
-                    <Plus className="w-4 h-4 mr-2" /> Create Bounty
-                  </Button>
-                }
-              />
-            </CardContent>
-          </Card>
+          <div className="py-12 text-center border border-border/40 rounded-xl border-dashed">
+            <p className="text-sm font-medium text-foreground mb-1">No bounties yet</p>
+            <p className="text-xs text-muted-foreground mb-5">Create your first research bounty to get started</p>
+            <CreateBountyModal
+              trigger={
+                <Button size="sm" className="rounded-full">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Bounty
+                </Button>
+              }
+            />
+          </div>
         ) : (
-          <div className="grid gap-3">
+          <div className="divide-y divide-border/30 border border-border/40 rounded-xl overflow-hidden">
             {bounties.map((bounty) => (
-              <Link key={bounty.id} href={`/dashboard/bounties/${bounty.id}`}>
-                <Card 
-                  className="bg-card border-border hover:border-accent/30 transition-colors cursor-pointer rounded-xl"
-                >
-                  <CardContent className="p-4 flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-foreground truncate">
-                        {bounty.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {formatCurrency(bounty.total_budget || 0, bounty.currency || "USD")}
-                      </p>
-                    </div>
-                    <Badge className={`${stateColors[bounty.current_state] || stateColors.drafting} border-0`}>
-                      {stateLabels[bounty.current_state] || bounty.current_state}
-                    </Badge>
-                  </CardContent>
-                </Card>
+              <Link key={bounty.id} href={`/dashboard/bounties/${bounty.id}`} className="block">
+                <div className="flex items-center gap-4 px-4 py-3.5 hover:bg-secondary/20 transition-colors group">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate group-hover:text-accent transition-colors">
+                      {bounty.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatCurrency(bounty.total_budget || 0, bounty.currency || "USD")}
+                    </p>
+                  </div>
+                  <Badge className={stateColors[bounty.current_state] || stateColors.drafting}>
+                    {stateLabels[bounty.current_state] || bounty.current_state}
+                  </Badge>
+                </div>
               </Link>
             ))}
           </div>
         )}
       </div>
 
-      {/* Quick Action */}
-      <Card className="bg-accent/10 border-accent/20 rounded-xl overflow-hidden">
-        <CardContent className="p-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="font-medium text-foreground">Ready to fund research?</p>
-            <p className="text-sm text-muted-foreground">Create a bounty and connect with verified labs</p>
-          </div>
-          <CreateBountyModal 
+      {/* CTA — only when has bounties */}
+      {!isEmpty && !isLoading && (
+        <div className="flex items-center justify-between py-4 border-t border-border/30">
+          <p className="text-sm text-muted-foreground">Ready to fund new research?</p>
+          <CreateBountyModal
             trigger={
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-full">
-                Create Bounty
+              <Button size="sm" className="rounded-full">
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> New Bounty
               </Button>
             }
           />
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   )
 }

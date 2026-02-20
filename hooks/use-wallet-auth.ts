@@ -1,173 +1,101 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAccount, useConnect, useDisconnect, useSignMessage } from 'wagmi'
 import { base } from 'wagmi/chains'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
-type AuthStep = 'idle' | 'connecting' | 'signing' | 'authenticating'
+type Step = 'idle' | 'connecting' | 'signing' | 'authenticating'
 
-/**
- * useWalletAuth - Unified hook for wallet sign-in
- * 
- * Supports:
- * - Base chain via Coinbase Wallet or MetaMask (wagmi)
- * - Solana via Phantom (window.solana)
- */
 export function useWalletAuth() {
-  const [step, setStep] = useState<AuthStep>('idle')
+  const [step, setStep] = useState<Step>('idle')
   const [error, setError] = useState<string | null>(null)
-  const authInProgress = useRef(false)
+  const authLock = useRef(false)
 
-  // Wagmi hooks (for Base/EVM)
-  const { address, isConnected, connector: activeConnector } = useAccount()
-  const { connect, connectors, isPending: isConnecting } = useConnect()
-  const { disconnect: wagmiDisconnect } = useDisconnect()
+  const { address, isConnected, connector } = useAccount()
+  const { connect, connectors, isPending } = useConnect()
+  const { disconnect } = useDisconnect()
   const { signMessageAsync } = useSignMessage()
-
-  // Auth context
   const { signInWithWallet, signOut, isAuthenticated } = useAuth()
 
-  // After wagmi connects, run the sign+auth flow
+  // Once wallet connects, immediately run auth
   useEffect(() => {
-    if (isConnected && address && step === 'connecting' && !authInProgress.current) {
-      authInProgress.current = true
-      authenticateEVM(address).finally(() => {
-        authInProgress.current = false
-      })
+    if (isConnected && address && step === 'connecting' && !authLock.current) {
+      authLock.current = true
+      authenticate(address).finally(() => { authLock.current = false })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, address, step])
 
-  // ── EVM/Base authentication ──
-  const authenticateEVM = async (walletAddress: string) => {
+  const authenticate = async (walletAddress: string) => {
     try {
       setStep('signing')
       setError(null)
 
-      const nonceRes = await fetch(`/api/auth/wallet?address=${walletAddress}&provider=evm`)
-      if (!nonceRes.ok) throw new Error('Failed to get authentication challenge')
-      const { message, nonce } = await nonceRes.json()
+      // Get challenge from server
+      const res = await fetch(`/api/auth/wallet?address=${walletAddress}`)
+      if (!res.ok) throw new Error('Failed to get sign-in challenge')
+      const { message } = await res.json()
 
+      // Sign with Coinbase Smart Wallet (EIP-1271)
       const signature = await signMessageAsync({ message })
 
       setStep('authenticating')
 
-      const { error: authError } = await signInWithWallet('evm', walletAddress, signature, message, nonce)
+      // Verify + create session
+      const { error: authError } = await signInWithWallet('evm', walletAddress, signature, message, '')
       if (authError) throw authError
 
       setStep('idle')
-      toast.success('Signed in successfully')
+      toast.success('Signed in')
     } catch (err) {
-      wagmiDisconnect()
-      setError(err instanceof Error ? err.message : 'Authentication failed')
+      disconnect()
+      const msg = err instanceof Error ? err.message : 'Sign-in failed'
+      setError(msg)
       setStep('idle')
     }
   }
 
-  // ── Solana/Phantom authentication ──
-  const connectSolana = useCallback(async () => {
+  const signIn = useCallback(() => {
     setError(null)
     setStep('connecting')
-
-    try {
-      const solana = (window as unknown as {
-        solana?: {
-          isPhantom?: boolean
-          connect: () => Promise<{ publicKey: { toString: () => string } }>
-          signMessage: (msg: Uint8Array, encoding: string) => Promise<{ signature: Uint8Array }>
-        }
-      }).solana
-
-      if (!solana?.isPhantom) {
-        window.open('https://phantom.app/', '_blank')
-        throw new Error('Phantom wallet not found. Please install it and try again.')
-      }
-
-      const resp = await solana.connect()
-      const walletAddress = resp.publicKey.toString()
-
-      setStep('signing')
-
-      // Get nonce
-      const nonceRes = await fetch(`/api/auth/wallet?address=${walletAddress}&provider=solana`)
-      if (!nonceRes.ok) throw new Error('Failed to get authentication challenge')
-      const { message, nonce } = await nonceRes.json()
-
-      // Sign
-      const encodedMessage = new TextEncoder().encode(message)
-      const signedMessage = await solana.signMessage(encodedMessage, 'utf8')
-      const signature = btoa(String.fromCharCode(...signedMessage.signature))
-
-      setStep('authenticating')
-
-      const { error: authError } = await signInWithWallet('solana', walletAddress, signature, message, nonce)
-      if (authError) throw authError
-
-      setStep('idle')
-      toast.success('Signed in successfully')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Solana authentication failed')
-      setStep('idle')
-    }
-  }, [signInWithWallet])
-
-  // ── Connect EVM wallet (Base) ──
-  const connectBase = useCallback((connectorIndex: number) => {
-    setError(null)
-    setStep('connecting')
-
-    const connector = connectors[connectorIndex]
+    const connector = connectors[0] // Coinbase Smart Wallet
     if (!connector) {
-      setError('Wallet not available')
+      setError('Coinbase Wallet not available')
       setStep('idle')
       return
     }
-
     connect(
       { connector, chainId: base.id },
-      {
-        onError: (err) => {
-          setError(err.message || 'Failed to connect wallet')
-          setStep('idle')
-        },
-      }
+      { onError: (e) => { setError(e.message); setStep('idle') } }
     )
   }, [connect, connectors])
 
-  // ── Disconnect + sign out ──
-  const disconnectAndSignOut = useCallback(async () => {
-    wagmiDisconnect()
+  const signOut_ = useCallback(async () => {
+    disconnect()
     await signOut()
     setStep('idle')
     setError(null)
-    toast.success('Signed out')
-  }, [wagmiDisconnect, signOut])
+  }, [disconnect, signOut])
 
-  const stepLabel = (() => {
-    switch (step) {
-      case 'connecting': return 'Connecting wallet...'
-      case 'signing': return 'Sign the message in your wallet...'
-      case 'authenticating': return 'Signing you in...'
-      default: return null
-    }
-  })()
+  const stepLabel = {
+    connecting: 'Opening Coinbase Wallet...',
+    signing: 'Approve sign-in in your wallet...',
+    authenticating: 'Signing you in...',
+    idle: null,
+  }[step]
 
   return {
-    // State
     address,
     isConnected,
     isAuthenticated,
-    isLoading: step !== 'idle' || isConnecting,
+    isLoading: step !== 'idle' || isPending,
     step,
     stepLabel,
     error,
-    activeConnector,
-
-    // Actions
-    connectBase,       // connect via Coinbase Wallet or MetaMask (index 0 or 1)
-    connectSolana,     // connect via Phantom
-    disconnectAndSignOut,
+    activeConnector: connector,
+    signIn,
+    signOut: signOut_,
   }
 }

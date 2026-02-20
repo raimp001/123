@@ -3,8 +3,8 @@ import type { Metadata } from "next"
 import { Inter, Merriweather, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { Providers } from "@/components/providers"
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
+import { SidebarProvider } from "@/components/ui/sidebar"
+import { LayoutShell } from "@/components/layout-shell"
 import { cookies } from "next/headers"
 import { 
   OrganizationStructuredData, 
@@ -12,8 +12,6 @@ import {
   SoftwareApplicationStructuredData,
   FAQStructuredData 
 } from "@/components/structured-data"
-import Link from "next/link"
-import { HeaderWallet } from "@/components/header-wallet"
 
 // Sans-serif for UI elements
 const inter = Inter({ 
@@ -134,30 +132,7 @@ export default async function RootLayout({
         <FAQStructuredData />
         <Providers>
           <SidebarProvider defaultOpen={defaultOpen}>
-            <AppSidebar />
-            <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[sidebar-state=expanded]:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-linear">
-              {/* Header with branding */}
-              <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
-                <div className="flex items-center gap-8">
-                  <div className="flex items-center">
-                    <div className="md:hidden">
-                      <SidebarTrigger />
-                    </div>
-                    <Link href="/" className="ml-2 md:ml-0">
-                      <span className="text-base font-semibold tracking-tight text-foreground">SciFlow</span>
-                    </Link>
-                  </div>
-                  <nav className="hidden md:flex items-center gap-6">
-                    <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
-                    <Link href="/whitepaper" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Whitepaper</Link>
-                    <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</Link>
-                  </nav>
-                </div>
-                <HeaderWallet />
-              </header>
-              
-              <main className="flex-1 p-4 md:p-6">{children}</main>
-            </div>
+            <LayoutShell>{children}</LayoutShell>
           </SidebarProvider>
         </Providers>
       </body>

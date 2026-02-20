@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { useDebounce } from "@/hooks/use-debounce"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, FlaskConical, Shield, ShieldCheck, Building2, Star, MapPin, ExternalLink, Plus, RefreshCw, AlertTriangle } from "lucide-react"
+import { Search, Shield, ShieldCheck, Building2, Star, ExternalLink, Plus, RefreshCw } from "lucide-react"
 import { useLabs } from "@/hooks/use-labs"
 import Link from "next/link"
 
@@ -28,26 +28,24 @@ const tierConfig: Record<string, { label: string; color: string; icon: typeof Sh
 export default function LabsPage() {
   const [search, setSearch] = useState("")
   const [tierFilter, setTierFilter] = useState("all")
+  const debouncedSearch = useDebounce(search)
   
   const { labs, isLoading, error, refresh } = useLabs({
     tier: tierFilter === "all" ? undefined : tierFilter,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
   })
 
   const hasError = error !== null
   const isEmpty = !isLoading && !hasError && labs.length === 0
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 py-2">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-serif text-foreground">Labs</h1>
-          <p className="text-sm text-muted-foreground">Find verified research labs</p>
-        </div>
+        <h1 className="text-xl font-medium text-foreground">Browse Labs</h1>
         <Link href="/signup?role=lab">
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
-            <Plus className="w-4 h-4 mr-2" /> Apply as Lab
+          <Button size="sm" className="rounded-full">
+            <Plus className="w-3.5 h-3.5 mr-1.5" /> Apply as Lab
           </Button>
         </Link>
       </div>
@@ -55,21 +53,20 @@ export default function LabsPage() {
       {/* Filters */}
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <Input
             placeholder="Search labs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-card border-border rounded-full"
+            className="pl-10"
           />
         </div>
         <Select value={tierFilter} onValueChange={setTierFilter}>
-          <SelectTrigger className="w-[160px] bg-card border-border rounded-full">
-            <Shield className="w-4 h-4 mr-2 text-muted-foreground" />
-            <SelectValue placeholder="Tier" />
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All tiers" />
           </SelectTrigger>
-          <SelectContent className="bg-card border-border">
-            <SelectItem value="all">All Tiers</SelectItem>
+          <SelectContent>
+            <SelectItem value="all">All tiers</SelectItem>
             <SelectItem value="institutional">Institutional</SelectItem>
             <SelectItem value="trusted">Trusted</SelectItem>
             <SelectItem value="verified">Verified</SelectItem>
@@ -82,132 +79,94 @@ export default function LabsPage() {
       {isLoading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="bg-card border-border rounded-xl">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <Skeleton className="w-12 h-12 rounded-xl bg-secondary" />
-                  <div className="flex-1">
-                    <Skeleton className="h-5 w-3/4 mb-2 bg-secondary" />
-                    <Skeleton className="h-4 w-1/2 bg-secondary" />
-                  </div>
+            <div key={i} className="border border-border/40 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-2/3 mb-1.5" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
-                <Skeleton className="h-4 w-full mb-3 bg-secondary" />
-                <div className="flex gap-2">
-                  <Skeleton className="h-6 w-16 rounded-full bg-secondary" />
-                  <Skeleton className="h-6 w-16 rounded-full bg-secondary" />
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="flex gap-1.5">
+                <Skeleton className="h-5 w-16 rounded-md" />
+                <Skeleton className="h-5 w-16 rounded-md" />
+              </div>
+            </div>
           ))}
         </div>
       ) : hasError ? (
-        <Card className="bg-card border-border rounded-xl">
-          <CardContent className="p-10 text-center">
-            <AlertTriangle className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
-            <p className="font-medium text-foreground mb-2">Unable to load labs</p>
-            <p className="text-sm text-muted-foreground mb-4">Please check your connection and try again.</p>
-            <Button 
-              variant="outline" 
-              onClick={() => refresh()}
-              className="border-border text-foreground hover:bg-secondary rounded-full"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" /> Retry
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="py-10 text-center border border-border/40 rounded-xl">
+          <p className="text-sm text-muted-foreground mb-3">Unable to load labs</p>
+          <Button variant="outline" size="sm" onClick={() => refresh()} className="rounded-full">
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Retry
+          </Button>
+        </div>
       ) : isEmpty ? (
-        <Card className="bg-card border-border rounded-xl">
-          <CardContent className="p-10 text-center">
-            <FlaskConical className="w-10 h-10 mx-auto text-accent mb-4" />
-            <p className="font-semibold text-foreground mb-2">
-              {search ? "No labs match your search" : "No labs registered yet"}
-            </p>
-            <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-              {search ? "Try different keywords" : "Be among the first labs to join SciFlow"}
-            </p>
-            {!search && (
-              <Link href="/signup?role=lab">
-                <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
-                  <Plus className="w-4 h-4 mr-2" /> Apply as Lab
-                </Button>
-              </Link>
-            )}
-          </CardContent>
-        </Card>
+        <div className="py-12 text-center border border-border/40 rounded-xl border-dashed">
+          <p className="text-sm font-medium text-foreground mb-1">
+            {search ? "No labs found" : "No labs registered yet"}
+          </p>
+          <p className="text-xs text-muted-foreground mb-5">
+            {search ? "Try different keywords" : "Be among the first labs to join SciFlow"}
+          </p>
+          {!search && (
+            <Link href="/signup?role=lab">
+              <Button size="sm" className="rounded-full">
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Apply as Lab
+              </Button>
+            </Link>
+          )}
+        </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {labs.map((lab) => {
             const tier = tierConfig[lab.verification_tier] || tierConfig.unverified
             const TierIcon = tier.icon
-            
             return (
-              <Card 
-                key={lab.id} 
-                className="bg-card border-border hover:border-accent/30 transition-colors rounded-xl"
+              <div
+                key={lab.id}
+                className="border border-border/40 rounded-xl p-5 hover:border-border transition-colors"
               >
-                <CardContent className="p-5">
-                  {/* Header */}
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center">
-                        <FlaskConical className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-foreground">{lab.name}</h3>
-                        {lab.institution && (
-                          <p className="text-xs text-muted-foreground">{lab.institution}</p>
-                        )}
-                      </div>
-                    </div>
-                    <Badge className={`${tier.color} text-xs`}>
-                      <TierIcon className="w-3 h-3 mr-1" />
-                      {tier.label}
-                    </Badge>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="font-medium text-sm text-foreground">{lab.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {[lab.institution, lab.country].filter(Boolean).join(" · ")}
+                    </p>
                   </div>
+                  <Badge className={`${tier.color} text-xs flex-shrink-0`}>
+                    <TierIcon className="w-3 h-3 mr-1" />
+                    {tier.label}
+                  </Badge>
+                </div>
 
-                  {/* Location */}
-                  {lab.country && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
-                      <MapPin className="w-3 h-3" />
-                      {lab.country}
-                    </div>
-                  )}
-
-                  {/* Specialties */}
-                  {lab.specialties && lab.specialties.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {lab.specialties.slice(0, 3).map((s) => (
-                        <Badge key={s} variant="secondary" className="text-xs font-normal bg-secondary text-muted-foreground">
-                          {s}
-                        </Badge>
-                      ))}
-                      {lab.specialties.length > 3 && (
-                        <Badge variant="secondary" className="text-xs font-normal bg-secondary text-muted-foreground">
-                          +{lab.specialties.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Stats */}
-                  <div className="flex items-center justify-between pt-3 border-t border-border">
-                    <div className="flex items-center gap-1 text-sm">
-                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                      <span className="font-medium text-foreground">
-                        {lab.reputation_score?.toFixed(1) || "—"}
+                {lab.specialties && lab.specialties.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {lab.specialties.slice(0, 3).map((s) => (
+                      <span key={s} className="px-2 py-0.5 rounded-md bg-secondary/50 text-xs text-muted-foreground">
+                        {s}
                       </span>
-                    </div>
-                    {lab.staked_amount && (
-                      <span className="text-xs text-muted-foreground">
-                        ${lab.staked_amount.toLocaleString()} staked
+                    ))}
+                    {lab.specialties.length > 3 && (
+                      <span className="px-2 py-0.5 rounded-md bg-secondary/50 text-xs text-muted-foreground">
+                        +{lab.specialties.length - 3}
                       </span>
                     )}
-                    <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
-                      View <ExternalLink className="w-3 h-3 ml-1" />
-                    </Button>
                   </div>
-                </CardContent>
-              </Card>
+                )}
+
+                <div className="flex items-center justify-between pt-3 border-t border-border/30">
+                  <div className="flex items-center gap-1 text-xs">
+                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    <span className="text-foreground font-medium">
+                      {lab.reputation_score?.toFixed(1) || "—"}
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2">
+                    View <ExternalLink className="w-3 h-3 ml-1" />
+                  </Button>
+                </div>
+              </div>
             )
           })}
         </div>

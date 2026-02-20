@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useDebounce } from "@/hooks/use-debounce"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -80,10 +81,11 @@ export default function BountiesPage() {
   const [filter, setFilter] = useState("all")
   const [search, setSearch] = useState("")
   const [adminView, setAdminView] = useState<"all" | "queue" | "high_risk">("all")
+  const debouncedSearch = useDebounce(search)
   
   const { bounties, isLoading, error, pagination } = useBounties({
     state: filter === "all" ? undefined : filter,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
   })
 
   const decoratedBounties = useMemo(

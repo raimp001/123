@@ -1,24 +1,33 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode, useMemo } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
+import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { createClient } from '@/lib/supabase/client'
-import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import type { User as DbUser, Lab } from '@/types/database'
 
 interface AuthContextType {
-  user: User | null
-  session: Session | null
+  // Privy user state
+  privyUser: ReturnType<typeof usePrivy>['user']
+  isAuthenticated: boolean
+  isLoading: boolean
+
+  // DB user profile
   dbUser: DbUser | null
   lab: Lab | null
-  isLoading: boolean
-  isAuthenticated: boolean
   isFunder: boolean
   isLab: boolean
   isAdmin: boolean
-  isConfigured: boolean
+
+  // Wallet
   walletAddress: string | null
-  signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUpWithEmail: (email: string, password: string, fullName: string, role: 'funder' | 'lab') => Promise<{ error: Error | null }>
+  embeddedWallet: { address: string } | null
+
+  // Actions
+  login: () => void
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
+
+  // Legacy compat — kept for existing API routes
   signInWithWallet: (
     provider: 'solana' | 'evm',
     address: string,
@@ -26,230 +35,109 @@ interface AuthContextType {
     message: string,
     nonce: string,
   ) => Promise<{ error: Error | null }>
-  signOut: () => Promise<void>
-  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const { user: privyUser, authenticated, ready, login, logout: privyLogout } = usePrivy()
+  const { wallets } = useWallets()
+
   const [dbUser, setDbUser] = useState<DbUser | null>(null)
   const [lab, setLab] = useState<Lab | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  
-  const supabase = useMemo(() => createClient(), [])
-  const isConfigured = !!supabase
+  const [isSyncing, setIsSyncing] = useState(false)
 
-  const fetchUserData = useCallback(async (userId: string) => {
+  const supabase = createClient()
+
+  // Find the embedded or connected wallet
+  const embeddedWallet = wallets.find(w => w.walletClientType === 'privy') ?? wallets[0] ?? null
+  const walletAddress = embeddedWallet?.address ?? null
+
+  // Sync Privy user → Supabase user record
+  const syncUser = useCallback(async () => {
+    if (!privyUser || !supabase) return
+    setIsSyncing(true)
+
     try {
-      // Fetch user profile
-      const { data: userData, error: userError } = await supabase
+      const res = await fetch('/api/auth/privy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          privyUserId: privyUser.id,
+          email: privyUser.email?.address,
+          walletAddress: walletAddress?.toLowerCase(),
+          name: privyUser.google?.name,
+        }),
+      })
+
+      if (!res.ok) return
+
+      const { userId } = await res.json()
+
+      const { data: userData } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single()
 
-      if (userError) throw userError
-      setDbUser(userData)
-
-      // If user is a lab, fetch lab data
-      if (userData.role === 'lab') {
-        const { data: labData } = await supabase
-          .from('labs')
-          .select('*')
-          .eq('user_id', userId)
-          .single()
-        
-        setLab(labData)
+      if (userData) {
+        setDbUser(userData)
+        if (userData.role === 'lab') {
+          const { data: labData } = await supabase
+            .from('labs')
+            .select('*')
+            .eq('user_id', userId)
+            .single()
+          setLab(labData)
+        }
       }
-    } catch (error) {
-      console.error('Error fetching user data:', error)
+    } catch (e) {
+      console.error('[Auth] Sync failed:', e)
+    } finally {
+      setIsSyncing(false)
     }
-  }, [supabase])
-
-  const refreshUser = useCallback(async () => {
-    if (user?.id) {
-      await fetchUserData(user.id)
-    }
-  }, [user?.id, fetchUserData])
+  }, [privyUser, walletAddress, supabase])
 
   useEffect(() => {
-    // If Supabase is not configured, skip auth initialization
-    if (!supabase) {
-      setIsLoading(false)
-      return
+    if (ready && authenticated && privyUser) {
+      syncUser()
+    } else if (ready && !authenticated) {
+      setDbUser(null)
+      setLab(null)
     }
+  }, [ready, authenticated, privyUser, syncUser])
 
-    // Initial session check
-    const initAuth = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
-        setSession(currentSession)
-        setUser(currentSession?.user ?? null)
-        
-        if (currentSession?.user) {
-          await fetchUserData(currentSession.user.id)
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    initAuth()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, currentSession) => {
-        setSession(currentSession)
-        setUser(currentSession?.user ?? null)
-
-        if (event === 'SIGNED_IN' && currentSession?.user) {
-          await fetchUserData(currentSession.user.id)
-        } else if (event === 'SIGNED_OUT') {
-          setDbUser(null)
-          setLab(null)
-        }
-
-        setIsLoading(false)
-      }
-    )
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase, fetchUserData])
-
-  const signInWithEmail = async (email: string, password: string) => {
-    if (!supabase) {
-      return { error: new Error('Authentication not configured. Please set up Supabase.') }
-    }
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      return { error: error as Error | null }
-    } catch (error) {
-      return { error: error as Error }
-    }
-  }
-
-  const signUpWithEmail = async (email: string, password: string, fullName: string, role: 'funder' | 'lab') => {
-    if (!supabase) {
-      return { error: new Error('Authentication not configured. Please set up Supabase.') }
-    }
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName, role },
-        },
-      })
-
-      if (error) return { error }
-
-      // Create user profile
-      if (data.user) {
-        const { error: profileError } = await supabase.from('users').insert({
-          id: data.user.id,
-          email,
-          full_name: fullName,
-          role,
-        })
-
-        if (profileError) return { error: profileError as Error }
-
-        // If lab, create lab profile
-        if (role === 'lab') {
-          const { error: labError } = await supabase.from('labs').insert({
-            user_id: data.user.id,
-            name: fullName,
-          })
-
-          if (labError) return { error: labError as Error }
-        }
-      }
-
-      return { error: null }
-    } catch (error) {
-      return { error: error as Error }
-    }
-  }
-
-  const signInWithWallet = async (
-    provider: 'solana' | 'evm',
-    address: string,
-    signature: string,
-    message: string,
-    nonce: string,
-  ) => {
-    if (!supabase) {
-      return { error: new Error('Authentication not configured. Please set up Supabase.') }
-    }
-    try {
-      // Verify signature on the server
-      const response = await fetch('/api/auth/wallet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, address, signature, message, nonce }),
-      })
-
-      const result = await response.json()
-      
-      if (!response.ok) {
-        return { error: new Error(result.error || 'Wallet authentication failed') }
-      }
-
-      // Sign in with the returned token
-      const { error } = await supabase.auth.signInWithPassword({
-        email: result.email,
-        password: result.tempPassword,
-      })
-
-      return { error: error as Error | null }
-    } catch (error) {
-      return { error: error as Error }
-    }
-  }
-
-  const signOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut()
-    }
+  const logout = useCallback(async () => {
+    await privyLogout()
     setDbUser(null)
     setLab(null)
-  }
+  }, [privyLogout])
 
-  const walletAddress = dbUser?.wallet_address_evm || dbUser?.wallet_address_solana || null
+  // Legacy wallet sign-in compat (used by old hooks — now a no-op via Privy)
+  const signInWithWallet = async () => ({ error: null })
 
   const value: AuthContextType = {
-    user,
-    session,
+    privyUser,
+    isAuthenticated: authenticated,
+    isLoading: !ready || isSyncing,
     dbUser,
     lab,
-    isLoading,
-    isAuthenticated: !!user,
-    isFunder: dbUser?.role === 'funder',
+    isFunder: dbUser?.role === 'funder' || dbUser?.role === 'admin',
     isLab: dbUser?.role === 'lab',
     isAdmin: dbUser?.role === 'admin',
-    isConfigured,
     walletAddress,
-    signInWithEmail,
-    signUpWithEmail,
+    embeddedWallet: embeddedWallet ? { address: embeddedWallet.address } : null,
+    login,
+    logout,
+    refreshUser: syncUser,
     signInWithWallet,
-    signOut,
-    refreshUser,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  return ctx
 }
