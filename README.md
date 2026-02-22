@@ -1,79 +1,133 @@
-# SciFlow - DeSci Research Bounty Platform
+# SciFlowLabs — DeSci Research Bounty Platform
 
-A decentralized science (DeSci) platform connecting research funders with verified labs through bounties, milestones, and crypto-enabled payments.
+> Bridging the gap between research labs and institutional funding via bounties, milestones, peer review, and crypto-enabled payments.
+
+[![Deployments](https://img.shields.io/github/deployments/raimp001/sciflowlabs/production?label=Vercel)](https://sciflowlabs.vercel.app)
+
+---
+
+## What It Does
+
+SciFlowLabs connects **institutional funders** (universities, pharma, government agencies) with **verified research labs** through a trustless bounty system:
+
+1. Funders post bounties with milestones, budget, and ethics requirements
+2. Labs stake USDC to submit proposals (stake slashable on disputes)
+3. Admin + peer reviewers evaluate proposals (double-blind scorecard)
+4. Milestones are tracked with IPFS-pinned evidence
+5. Payments release automatically on milestone approval
+
+---
 
 ## Features
 
-- **Research Bounties** - Create and manage research bounties with milestone-based payouts
-- **Lab Verification** - Tiered verification system (Basic, Verified, Trusted, Institutional)
-- **Proposal System** - Labs submit proposals to compete for bounties
-- **Admin Ethics Gate** - Every bounty passes admin safety/ethics approval before funding
-- **OpenClaw Orchestration** - Automated pre-screening signals (harm, ethics, quality) to accelerate admin review
-- **Milestone Tracking** - Track research progress with deliverables and verification
-- **Multi-Currency Payments** - Support for USD (Stripe), Solana USDC, and Base USDC
-- **Escrow System** - Secure fund management with milestone-based releases
-- **Dispute Resolution** - Built-in arbitration for research disputes
+| Feature | Status |
+|---------|--------|
+| Research Bounty marketplace (`/bounties`) | ✓ Live |
+| Lab profiles with reputation + staking | ✓ Live |
+| Funder institution pages | ✓ Live |
+| Lab tiered verification (Basic → Institutional) | ✓ Live |
+| Proposal submission with lab staking | ✓ Live |
+| XState bounty lifecycle (state machine) | ✓ Live |
+| OpenClaw ethics pre-screening | ✓ Live |
+| Multi-currency payments (USD/USDC/Solana/Base) | ✓ Live |
+| Escrow system (Solana PDA + Base contract) | ✓ Live |
+| Dispute resolution + arbitration | ✓ Live |
+| **Scientific peer review (double-blind scorecard)** | ✓ PR#3 |
+| **IRB / ethics document upload flow** | ✓ PR#3 |
+| **IPFS milestone evidence pinning (Pinata)** | ✓ PR#3 |
+| **Reviewer role + ProposalReview type** | ✓ PR#3 |
+| IP rate limiting (Vercel KV / Upstash) | ✓ PR#1 |
+| Lab field normalization layer | ✓ PR#1 |
+
+---
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
-- **Database**: Supabase (PostgreSQL with Row Level Security)
-- **Styling**: Tailwind CSS + shadcn/ui
-- **Payments**: Stripe, Solana, Base (via Coinbase CDP SDK)
-- **State Management**: XState for bounty lifecycle
+| Layer | Technology |
+|-------|------------|
+| Framework | **Next.js 16** (App Router) |
+| Database | **Supabase** (PostgreSQL + RLS + Storage) |
+| Auth | Supabase Auth (email + wallet) |
+| Styling | Tailwind CSS + shadcn/ui |
+| Payments | Stripe, Solana USDC, Base USDC (Coinbase CDP SDK) |
+| State machine | XState (bounty lifecycle) |
+| IPFS | Pinata (milestone evidence + IRB docs) |
+| Rate limiting | Upstash Ratelimit + Vercel KV |
+| Deployment | Vercel |
+
+---
 
 ## Quick Start
 
-1. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-2. **Configure environment**
-   - Copy `.env.local` and fill in your credentials
-   - At minimum, you need Supabase credentials
-
-3. **Set up Supabase**
-   - Create a project at [supabase.com](https://supabase.com)
-   - Run the migration in `lib/db/migrations/001_initial_schema.sql`
-   - Add your Supabase URL and keys to `.env.local`
-
-4. **Run development server**
-   ```bash
-   pnpm dev
-   ```
-
-5. **Open the app**
-   - Navigate to [http://localhost:3000](http://localhost:3000)
-
-## Environment Variables
-
-Required for basic functionality:
-```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+### 1. Install dependencies
+```bash
+pnpm install
 ```
 
-See `docs/SETUP.md` for complete setup instructions including payment providers.
-For the hardened architecture and risk model, see `docs/SECURITY-HARDENING-AND-IDEAL-FLOW.md`.
+### 2. Configure environment
+Copy `.env.local.example` (or `.env.local`) and fill in:
 
-## Project Structure
+```env
+# Required
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
 
+# Payments
+STRIPE_SECRET_KEY=...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=...
+
+# IPFS (Pinata) — PR#3
+PINATA_JWT=...           # preferred (v2 JWT)
+# or legacy:
+# PINATA_API_KEY=...
+# PINATA_API_SECRET=...
+
+# Rate limiting (Vercel KV) — PR#1
+KV_REST_API_URL=...
+KV_REST_API_TOKEN=...
 ```
-├── app/                    # Next.js App Router pages
-│   ├── api/               # API routes
-│   ├── dashboard/         # Main application pages
-│   └── (auth)/           # Authentication pages
-├── components/            # React components
-├── hooks/                 # Custom React hooks
-├── lib/                   # Utilities and configurations
-│   ├── db/               # Database schema and migrations
-│   ├── machines/         # XState state machines
-│   ├── payments/         # Payment provider integrations
-│   └── supabase/         # Supabase client configuration
-└── types/                 # TypeScript type definitions
+
+### 3. Run locally
+```bash
+pnpm dev
 ```
+
+---
+
+## Key Routes
+
+| Route | Description |
+|-------|-------------|
+| `/bounties` | Public bounty marketplace (no login required) |
+| `/labs/[id]` | Public lab profile |
+| `/funders/[id]` | Funder institution page |
+| `/dashboard` | Authenticated user dashboard |
+| `/dashboard/proposals/[id]/review` | Peer review scorecard (reviewer role) |
+| `/api/proposals/[id]/review` | GET/POST scientific peer review |
+| `/api/milestones/[id]/evidence` | POST IPFS evidence upload |
+| `/api/bounties/[id]/irb` | GET/POST IRB document flow |
+
+---
+
+## Architecture Decisions
+
+- **Lab field normalization**: `lab.institution_affiliation` is canonical; `normalizeLab()` in `lib/normalize.ts` resolves legacy aliases without a DB migration.
+- **Double-blind peer review**: Reviewers score on 5 dimensions (merit 30%, feasibility 20%, innovation 20%, qualifications 15%, ethics 15%). Labs see only aggregate until 2-of-3 reviewers approve.
+- **IPFS evidence**: Milestone submissions must include a file pinned to IPFS via Pinata. The resulting CIDv1 is stored as `evidence_hash` — making deliverables immutable and publicly auditable.
+- **IRB document flow**: Funders upload PDFs to Supabase Storage; docs are also pinned to IPFS for permanence. Admins verify and set `irb_status='verified'` before escrow unlocks.
+- **Rate limiting**: Edge Middleware applies a sliding-window limiter (20 req/10s general, 10 req/10s for auth/payments). Stripe webhooks are excluded. Fails open if KV is unconfigured.
+
+---
+
+## Contributing
+
+PRs welcome. Please follow the existing commit convention:
+- `feat(scope/PR#N): description` for new features
+- `fix(scope): description` for bug fixes
+- `refactor(scope): description` for refactors
+
+---
 
 ## License
 
