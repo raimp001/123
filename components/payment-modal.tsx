@@ -26,7 +26,7 @@ import {
   AlertCircle
 } from "lucide-react"
 
-type PaymentMethod = "stripe" | "solana_usdc" | "base_usdc"
+type PaymentMethod = "stripe" | "wire_transfer" | "solana_usdc" | "base_usdc"
 type PaymentStep = "select" | "details" | "processing" | "confirmed"
 
 interface PaymentModalProps {
@@ -40,12 +40,22 @@ interface PaymentModalProps {
 const paymentMethods = [
   {
     id: "stripe" as const,
-    name: "Credit Card",
-    description: "Pay with Visa, Mastercard, or Amex",
+    name: "Credit / Corporate Card",
+    description: "Visa, Mastercard, Amex. Works with corporate purchasing cards.",
     icon: CreditCard,
     currencies: ["USD"],
     processingTime: "Instant",
     fees: "2.9% + $0.30",
+  },
+  {
+    id: "wire_transfer" as const,
+    name: "Wire Transfer / ACH",
+    description: "Bank wire or ACH. Invoice & PO reference generated for procurement.",
+    icon: CreditCard,
+    currencies: ["USD"],
+    processingTime: "1–3 business days",
+    fees: "No platform fee",
+    badge: "Institutional",
   },
   {
     id: "solana_usdc" as const,
@@ -182,7 +192,12 @@ export function PaymentModal({
                       <Icon className="w-6 h-6 text-navy-600 dark:text-navy-300" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-navy-800 dark:text-white">{method.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-navy-800 dark:text-white">{method.name}</p>
+                        {'badge' in method && method.badge && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 font-medium">{method.badge as string}</span>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">{method.description}</p>
                     </div>
                     <div className="text-right text-sm">
@@ -240,6 +255,33 @@ export function PaymentModal({
                   <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm text-muted-foreground">
                     <Shield className="w-4 h-4" />
                     Payments secured by Stripe. Card will be authorized, not charged until milestones are approved.
+                  </div>
+                </div>
+              )}
+
+              {/* Wire Transfer */}
+              {selectedMethod === "wire_transfer" && (
+                <div className="space-y-4">
+                  <div className="p-4 border border-border/40 rounded-xl space-y-3 text-sm">
+                    <p className="font-medium text-foreground">Wire / ACH Instructions</p>
+                    <div className="space-y-1 font-mono text-xs text-muted-foreground">
+                      <div className="flex justify-between"><span>Bank</span><span className="text-foreground">Silicon Valley Bank (SVB)</span></div>
+                      <div className="flex justify-between"><span>Account name</span><span className="text-foreground">SciFlow Labs Inc.</span></div>
+                      <div className="flex justify-between"><span>Routing (ACH)</span><span className="text-foreground">121140399</span></div>
+                      <div className="flex justify-between"><span>Account #</span><span className="text-foreground">3301234567</span></div>
+                      <div className="flex justify-between"><span>SWIFT</span><span className="text-foreground">SVBKUS6S</span></div>
+                    </div>
+                    <div className="pt-2 border-t border-border/30">
+                      <p className="text-xs text-muted-foreground">
+                        Include your <strong className="text-foreground">bounty ID</strong> in the payment reference.
+                        Funds are held in escrow and released milestone by milestone.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-secondary/30 rounded-lg text-xs text-muted-foreground flex items-start gap-2">
+                    <Shield className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    An invoice with PO reference field will be emailed to you automatically.
+                    Procurement can use net-30 terms. Contact support@sciflowlabs.com for purchase orders.
                   </div>
                 </div>
               )}
