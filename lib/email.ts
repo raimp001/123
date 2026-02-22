@@ -1,10 +1,10 @@
 /**
- * Email notifications via Resend.
- * Falls back to console logging if RESEND_API_KEY is not set.
+ * Email notifications via Plunk.
+ * Falls back to console logging if PLUNK_API_KEY is not set.
+ * @see https://docs.useplunk.com
  */
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY
-const FROM = 'SciFlow <notifications@sciflowlabs.com>'
+const PLUNK_API_KEY = process.env.PLUNK_API_KEY
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@sciflowlabs.com'
 
 interface EmailPayload {
@@ -14,25 +14,38 @@ interface EmailPayload {
 }
 
 async function sendEmail(payload: EmailPayload): Promise<{ ok: boolean; error?: string }> {
-  if (!RESEND_API_KEY) {
-    console.log('[Email] No RESEND_API_KEY — would have sent:', payload.subject, '→', payload.to)
+  if (!PLUNK_API_KEY) {
+    console.log('[Email] No PLUNK_API_KEY — would have sent:', payload.subject, '→', payload.to)
     return { ok: true }
   }
 
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ from: FROM, ...payload }),
-    })
+  const recipients = Array.isArray(payload.to) ? payload.to : [payload.to]
 
-    if (!res.ok) {
-      const text = await res.text()
-      console.error('[Email] Resend error:', text)
-      return { ok: false, error: text }
+  try {
+    // Send to each recipient (Plunk sends one at a time)
+    for (const to of recipients) {
+      const res = await fetch('https://api.useplunk.com/v1/send', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${PLUNK_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to,
+          subject: payload.subject,
+          body: payload.html,
+          // Plunk uses "body" for HTML content
+          type: 'html',
+          from: 'SciFlow <notifications@sciflowlabs.com>',
+          name: 'SciFlow',
+        }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('[Email] Plunk error:', text)
+        return { ok: false, error: text }
+      }
     }
 
     return { ok: true }
