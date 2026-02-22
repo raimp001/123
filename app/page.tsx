@@ -58,7 +58,7 @@ export default function HomePage() {
               For Institutions
             </Button>
           </Link>
-          <Link href="/dashboard/open-bounties">
+                    <Link href="/bounties">
             <Button size="lg" variant="ghost" className="rounded-full px-8 h-12 text-muted-foreground">
               Browse Bounties
             </Button>
