@@ -1,33 +1,133 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
-// Check if Supabase is configured
-const hasSupabase = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+// ── Supabase env guard ─────────────────────────────────────────────────────────
+const hasSupabase = !!(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
 
+// ── Rate limit config ───────────────────────────────────────────────────────────
+// Two separate buckets:
+//   general  — 20 req / 10 s  (all /api/* except auth & payments)
+//   sensitive — 10 req / 10 s  (/api/auth/* and /api/payments/*)
+//
+// Uses Vercel KV (Redis) via @upstash/ratelimit.
+// Set KV_REST_API_URL and KV_REST_API_TOKEN in Vercel project env.
+// Stripe webhooks (/api/webhooks/*) are EXCLUDED from rate limiting.
+
+const hasKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+
+type RateLimitResult = { success: boolean; limit: number; remaining: number; reset: number }
+
+async function checkRateLimit(
+  key: string,
+  max: number,
+  windowSeconds: number
+): Promise<RateLimitResult> {
+  if (!hasKV) {
+    // KV not configured (local dev) — always allow
+    return { success: true, limit: max, remaining: max, reset: 0 }
+  }
+
+  try {
+    // Dynamic import so build succeeds without KV env vars
+    const { Ratelimit } = await import('@upstash/ratelimit')
+    const { kv } = await import('@vercel/kv')
+
+    const ratelimit = new Ratelimit({
+      redis: kv,
+      limiter: Ratelimit.slidingWindow(max, `${windowSeconds} s`),
+      prefix: 'sciflow_rl',
+    })
+
+    const result = await ratelimit.limit(key)
+    return {
+      success: result.success,
+      limit: result.limit,
+      remaining: result.remaining,
+      reset: result.reset,
+    }
+  } catch {
+    // Fail open — never block requests due to KV errors
+    return { success: true, limit: max, remaining: max, reset: 0 }
+  }
+}
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown'
+  )
+}
+
+function rateLimitHeaders(result: RateLimitResult): Record<string, string> {
+  return {
+    'X-RateLimit-Limit': String(result.limit),
+    'X-RateLimit-Remaining': String(result.remaining),
+    'X-RateLimit-Reset': String(result.reset),
+  }
+}
+
+// ── Middleware ────────────────────────────────────────────────────────────────
 export async function middleware(request: NextRequest) {
-  // If Supabase is not configured, just pass through
-  if (!hasSupabase) {
+  const { pathname } = request.nextUrl
+  const ip = getClientIp(request)
+
+  // 1) Stripe / payment webhooks — skip rate limiting and session refresh
+  if (pathname.startsWith('/api/webhooks/')) {
     return NextResponse.next()
   }
 
-  // Dynamic import to avoid errors when Supabase is not configured
+  // 2) Rate-limit API routes
+  if (pathname.startsWith('/api/')) {
+    const isSensitive =
+      pathname.startsWith('/api/auth/') ||
+      pathname.startsWith('/api/payments/')
+
+    const bucket = isSensitive ? 'sensitive' : 'general'
+    const [max, window] = isSensitive ? [10, 10] : [20, 10]
+    const key = `${bucket}_${ip}`
+
+    const result = await checkRateLimit(key, max, window)
+    const headers = rateLimitHeaders(result)
+
+    if (!result.success) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Too Many Requests', retryAfter: result.reset }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(Math.ceil((result.reset - Date.now()) / 1000)),
+            ...headers,
+          },
+        }
+      )
+    }
+
+    const res = NextResponse.next()
+    Object.entries(headers).forEach(([k, v]) => res.headers.set(k, v))
+    return res
+  }
+
+  // 3) Non-API: Supabase session refresh
+  if (!hasSupabase) return NextResponse.next()
+
   const { updateSession } = await import('@/lib/supabase/middleware')
-  
-  // Update session and get response
-  const response = await updateSession(request)
-  
-  return response
+  return updateSession(request)
 }
 
+// ── Matcher ───────────────────────────────────────────────────────────────────
 export const config = {
   matcher: [
     /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api/auth (auth endpoints)
+     * Match every path EXCEPT:
+     *   - _next/static  (static assets)
+     *   - _next/image   (image optimisation)
+     *   - favicon.ico
+     *   - public/       (public folder)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|api/auth).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 }
