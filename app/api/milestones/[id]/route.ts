@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       submission_notes,
       evidence_links: evidence_links || [],
       evidence_hash: evidence_hash || null,
-      submitted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq('id', id)
 
@@ -86,7 +86,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { id } = await params
   const supabase = await createClient()
   const adminClient = createAdminClient()
-
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -115,14 +114,14 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Milestone is not pending review' }, { status: 400 })
   }
 
-  const newStatus = action === 'approve' ? 'verified' : 'rejected'
-
+  // Use 'approved' to match MilestoneStatus enum (not 'verified')
+  const newStatus = action === 'approve' ? 'approved' : 'rejected'
   const { error: updateErr } = await supabase
     .from('milestones')
     .update({
       status: newStatus,
       review_feedback: feedback || null,
-      verified_at: action === 'approve' ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
     })
     .eq('id', id)
 
@@ -135,15 +134,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       .select('id, status, payout_percentage')
       .eq('bounty_id', bounty.id)
 
-    const allDone = allMilestones?.every(m => m.id === id ? true : m.status === 'verified')
+    const allDone = allMilestones?.every(m => m.id === id ? true : m.status === 'approved')
+
     if (allDone) {
       await adminClient.from('bounties').update({ state: 'completed', completed_at: new Date().toISOString() }).eq('id', bounty.id)
     } else {
       await adminClient.from('bounties').update({ state: 'active_research' }).eq('id', bounty.id)
     }
 
-    // Log escrow release
-    const { data: escrow } = await supabase.from('escrows').select('id, total_amount').eq('bounty_id', bounty.id).single()
+    // Log escrow release (table name: escrow — singular, per migration)
+    const { data: escrow } = await supabase.from('escrow').select('id, total_amount').eq('bounty_id', bounty.id).single()
     if (escrow) {
       const payoutAmount = (escrow.total_amount * milestone.payout_percentage) / 100
       await adminClient.from('escrow_releases').insert({
