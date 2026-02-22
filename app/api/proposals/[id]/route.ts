@@ -19,7 +19,8 @@ export async function GET(
           funder:users!bounties_funder_id_fkey(id, full_name, avatar_url)
         ),
         lab:labs!proposals_lab_id_fkey(
-          id, name, verification_tier, reputation_score, bio, institution
+          id, name, verification_tier, reputation_score,
+          description, institution_affiliation
         )
       `)
       .eq('id', id)
@@ -47,7 +48,7 @@ export async function PATCH(
   try {
     const { id } = await params
     const supabase = await createClient()
-    
+
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -86,9 +87,9 @@ export async function PATCH(
       // Accept this proposal
       const { error: updateError } = await supabase
         .from('proposals')
-        .update({ 
+        .update({
           status: 'accepted',
-          accepted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
 
@@ -99,9 +100,9 @@ export async function PATCH(
       // Reject all other proposals for this bounty
       await supabase
         .from('proposals')
-        .update({ 
+        .update({
           status: 'rejected',
-          rejection_reason: 'Another proposal was selected',
+          updated_at: new Date().toISOString(),
         })
         .eq('bounty_id', proposal.bounty_id)
         .neq('id', id)
@@ -147,13 +148,14 @@ export async function PATCH(
       })
 
       return NextResponse.json({ success: true, status: 'accepted' })
+
     } else if (action === 'reject') {
       // Reject this proposal
       const { error: updateError } = await supabase
         .from('proposals')
-        .update({ 
+        .update({
           status: 'rejected',
-          rejection_reason: rejection_reason || 'Proposal did not meet requirements',
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
 
@@ -171,6 +173,7 @@ export async function PATCH(
       })
 
       return NextResponse.json({ success: true, status: 'rejected' })
+
     } else {
       return NextResponse.json({ error: 'Invalid action. Use "accept" or "reject"' }, { status: 400 })
     }
