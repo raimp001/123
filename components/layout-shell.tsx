@@ -26,8 +26,8 @@ export function LayoutShell({ children }: { children: ReactNode }) {
               <span className="text-sm font-semibold tracking-tight text-foreground">SciFlow</span>
             </Link>
             <nav className="hidden md:flex items-center gap-6">
+              <Link href="/for-institutions" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Institutions</Link>
               <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
-              <Link href="/whitepaper" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Whitepaper</Link>
               <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</Link>
             </nav>
           </div>
