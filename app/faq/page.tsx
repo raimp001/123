@@ -174,16 +174,12 @@ export default function FAQPage() {
             Check our documentation or reach out directly.
           </p>
           <div className="flex justify-center gap-3">
-            <Link href="/docs">
-              <Button variant="outline" className="border-border text-foreground hover:bg-secondary rounded-full">
-                Read Docs
-              </Button>
-            </Link>
-            <Link href="/help">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
-                Contact Support
-              </Button>
-            </Link>
+            <Button asChild variant="outline" className="border-border text-foreground hover:bg-secondary rounded-full">
+              <Link href="/docs">Read Docs</Link>
+            </Button>
+            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full">
+              <Link href="/help">Contact Support</Link>
+            </Button>
           </div>
         </div>
       </div>

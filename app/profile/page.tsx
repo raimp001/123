@@ -109,16 +109,12 @@ export default function ProfilePage() {
               Create an account or sign in to manage your profile, track bounties, and connect with labs.
             </p>
             <div className="flex justify-center gap-3">
-              <Link href="/login">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button variant="outline" className="border-border text-foreground hover:bg-secondary">
-                  Create Account
-                </Button>
-              </Link>
+              <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button asChild variant="outline" className="border-border text-foreground hover:bg-secondary">
+                <Link href="/signup">Create Account</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -428,12 +424,12 @@ export default function ProfilePage() {
 
             {formData.role !== "funder" && (
               <div className="pt-2">
-                <Link href="/dashboard/apply-as-lab">
-                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Link href="/dashboard/apply-as-lab">
                     <FlaskConical className="w-4 h-4 mr-2" />
                     Apply for Lab Verification
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             )}
           </div>

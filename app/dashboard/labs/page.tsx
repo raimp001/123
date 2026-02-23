@@ -53,11 +53,11 @@ export default function LabsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-medium text-foreground">Browse Labs</h1>
-        <Link href="/signup?role=lab">
-          <Button size="sm" className="rounded-full">
+        <Button asChild size="sm" className="rounded-full">
+          <Link href="/signup?role=lab">
             <Plus className="w-3.5 h-3.5 mr-1.5" /> Apply as Lab
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       {/* Filters */}
@@ -132,11 +132,11 @@ export default function LabsPage() {
             {search ? "Try different keywords" : "Be among the first labs to join SciFlow"}
           </p>
           {!search && (
-            <Link href="/signup?role=lab">
-              <Button size="sm" className="rounded-full">
+            <Button asChild size="sm" className="rounded-full">
+              <Link href="/signup?role=lab">
                 <Plus className="w-3.5 h-3.5 mr-1.5" /> Apply as Lab
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           )}
         </div>
       ) : (
@@ -194,11 +194,11 @@ export default function LabsPage() {
                     </TooltipTrigger>
                     <TooltipContent>Reputation score from completed bounties</TooltipContent>
                   </Tooltip>
-                  <Link href={`/labs/${lab.id}`}>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2">
+                  <Button asChild variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2">
+                    <Link href={`/labs/${lab.id}`}>
                       View <ExternalLink className="w-3 h-3 ml-1" />
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               </div>
             )

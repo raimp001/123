@@ -280,11 +280,9 @@ export default function SignupPage() {
               </span>
             </div>
           </div>
-          <Link href="/login" className="w-full">
-            <Button variant="outline" className="w-full border-border text-foreground hover:bg-secondary rounded-full">
-              Sign In
-            </Button>
-          </Link>
+          <Button asChild variant="outline" className="w-full border-border text-foreground hover:bg-secondary rounded-full">
+            <Link href="/login" className="w-full block text-center">Sign In</Link>
+          </Button>
         </CardFooter>
       </Card>
     </div>

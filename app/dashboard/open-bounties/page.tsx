@@ -62,11 +62,11 @@ export default function OpenBountiesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-medium text-foreground">Open Bounties</h1>
         <div className="flex gap-2">
-          <Link href="/dashboard/bounties">
-            <Button size="sm" className="rounded-full">
+          <Button asChild size="sm" className="rounded-full">
+            <Link href="/dashboard/bounties">
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Post Bounty
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -103,11 +103,11 @@ export default function OpenBountiesPage() {
           <div className="py-12 text-center border border-border/40 rounded-xl border-dashed">
             <p className="text-sm font-medium text-foreground mb-1">No open bounties yet</p>
             <p className="text-xs text-muted-foreground mb-5">Post a bounty to get proposals from verified labs</p>
-            <Link href="/dashboard/bounties">
-              <Button size="sm" className="rounded-full">
+            <Button asChild size="sm" className="rounded-full">
+              <Link href="/dashboard/bounties">
                 <Plus className="w-3.5 h-3.5 mr-1.5" /> Post a Bounty
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
 
           <div className="border border-border/40 rounded-xl p-5">
@@ -159,12 +159,12 @@ export default function OpenBountiesPage() {
                     </span>
                   )}
                 </div>
-                <Link href={`/dashboard/bounties/${bounty.id}`}>
-                  <Button size="sm" className="rounded-full h-8 text-xs">
+                <Button asChild size="sm" className="rounded-full h-8 text-xs">
+                  <Link href={`/dashboard/bounties/${bounty.id}`}>
                     <Send className="w-3 h-3 mr-1.5" />
                     Propose
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </div>
             )

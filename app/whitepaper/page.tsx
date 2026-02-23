@@ -479,19 +479,12 @@ export default function WhitepaperPage() {
                 Join SciFlow to fund breakthrough research or offer your lab&apos;s expertise.
               </p>
               <div className="flex items-center justify-center gap-3">
-                <Link href="/signup">
-                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-full">
-                    Sign Up Now
-                  </Button>
-                </Link>
-                <Link href="/dashboard">
-                  <Button 
-                    variant="outline" 
-                    className="border-border text-foreground hover:bg-secondary rounded-full"
-                  >
-                    Browse Bounties
-                  </Button>
-                </Link>
+                <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-full">
+                  <Link href="/signup">Sign Up Now</Link>
+                </Button>
+                <Button asChild variant="outline" className="border-border text-foreground hover:bg-secondary rounded-full">
+                  <Link href="/dashboard">Browse Bounties</Link>
+                </Button>
               </div>
             </CardContent>
           </Card>

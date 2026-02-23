@@ -77,16 +77,12 @@ export default function SettingsPage() {
               Create an account or sign in to customize your notifications, security, and display preferences.
             </p>
             <div className="flex justify-center gap-3">
-              <Link href="/login">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button variant="outline" className="border-border text-foreground hover:bg-secondary">
-                  Create Account
-                </Button>
-              </Link>
+              <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button asChild variant="outline" className="border-border text-foreground hover:bg-secondary">
+                <Link href="/signup">Create Account</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

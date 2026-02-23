@@ -68,11 +68,9 @@ function FunderDashboard() {
               {stats.needsAttention} milestone{stats.needsAttention > 1 ? 's' : ''} submitted — review and approve to release payment
             </p>
           </div>
-          <Link href="/dashboard/bounties?state=milestone_review">
-            <Button size="sm" className="rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 border-0">
-              Review now →
-            </Button>
-          </Link>
+          <Button asChild size="sm" className="rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 border-0">
+            <Link href="/dashboard/bounties?state=milestone_review">Review now →</Link>
+          </Button>
         </div>
       )}
 
@@ -179,11 +177,11 @@ function LabDashboard() {
     <div className="max-w-3xl mx-auto space-y-8 py-2">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-medium text-foreground">My Research Work</h1>
-        <Link href="/dashboard/open-bounties">
-          <Button className="rounded-full gap-2" size="sm">
+        <Button asChild className="rounded-full gap-2" size="sm">
+          <Link href="/dashboard/open-bounties">
             <Search className="w-3.5 h-3.5" /> Find Projects
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       {/* Active assignment */}
@@ -231,11 +229,11 @@ function LabDashboard() {
           <FlaskConical className="w-8 h-8 mx-auto text-muted-foreground mb-3" />
           <p className="font-medium text-foreground mb-1">No active projects</p>
           <p className="text-sm text-muted-foreground mb-5">Browse open projects and submit a proposal to get started</p>
-          <Link href="/dashboard/open-bounties">
-            <Button className="rounded-full gap-2">
+          <Button asChild className="rounded-full gap-2">
+            <Link href="/dashboard/open-bounties">
               <Search className="w-4 h-4" /> Browse open projects
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       )}
     </div>

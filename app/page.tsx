@@ -48,21 +48,15 @@ export default function HomePage() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/dashboard">
-            <Button size="lg" className="rounded-full px-8 h-12 gap-2">
-              Post a Bounty <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-          <Link href="/for-institutions">
-            <Button size="lg" variant="outline" className="rounded-full px-8 h-12">
-              For Institutions
-            </Button>
-          </Link>
-                    <Link href="/bounties">
-            <Button size="lg" variant="ghost" className="rounded-full px-8 h-12 text-muted-foreground">
-              Browse Bounties
-            </Button>
-          </Link>
+          <Button asChild size="lg" className="rounded-full px-8 h-12 gap-2">
+            <Link href="/dashboard">Post a Bounty <ArrowRight className="w-4 h-4" /></Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="rounded-full px-8 h-12">
+            <Link href="/for-institutions">For Institutions</Link>
+          </Button>
+          <Button asChild size="lg" variant="ghost" className="rounded-full px-8 h-12 text-muted-foreground">
+            <Link href="/bounties">Browse Bounties</Link>
+          </Button>
         </div>
       </section>
 
@@ -93,11 +87,9 @@ export default function HomePage() {
           </div>
 
           <div className="mt-8 text-center">
-            <Link href="/for-institutions">
-              <Button variant="outline" className="rounded-full gap-2">
-                Institutional onboarding <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
-            </Link>
+            <Button asChild variant="outline" className="rounded-full gap-2">
+              <Link href="/for-institutions">Institutional onboarding <ArrowRight className="w-3.5 h-3.5" /></Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -116,11 +108,9 @@ export default function HomePage() {
                 Web3-native funders can deposit USDC directly on-chain.
                 Everyone gets the same protected, milestone-gated escrow.
               </p>
-              <Link href="/dashboard">
-                <Button className="rounded-full gap-2">
-                  Start a bounty <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
+              <Button asChild className="rounded-full gap-2">
+                <Link href="/dashboard">Start a bounty <ArrowRight className="w-3.5 h-3.5" /></Link>
+              </Button>
             </div>
 
             <div className="space-y-0 divide-y divide-border/30">
@@ -198,11 +188,9 @@ export default function HomePage() {
                 Get paid per milestone — in stablecoins or fiat — without waiting
                 for slow grant disbursements.
               </p>
-              <Link href="/signup">
-                <Button variant="outline" className="rounded-full gap-2">
-                  Apply as a lab <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
+              <Button asChild variant="outline" className="rounded-full gap-2">
+                <Link href="/signup">Apply as a lab <ArrowRight className="w-3.5 h-3.5" /></Link>
+              </Button>
             </div>
             <div className="space-y-3">
               {[
@@ -236,16 +224,12 @@ export default function HomePage() {
             or consortium funding — all welcome.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/dashboard">
-              <Button size="lg" className="rounded-full px-8 h-12 gap-2">
-                Post a Bounty <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Link href="/for-institutions">
-              <Button size="lg" variant="outline" className="rounded-full px-8 h-12">
-                Institutional Inquiry
-              </Button>
-            </Link>
+            <Button asChild size="lg" className="rounded-full px-8 h-12 gap-2">
+              <Link href="/dashboard">Post a Bounty <ArrowRight className="w-4 h-4" /></Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="rounded-full px-8 h-12">
+              <Link href="/for-institutions">Institutional Inquiry</Link>
+            </Button>
           </div>
         </div>
       </section>

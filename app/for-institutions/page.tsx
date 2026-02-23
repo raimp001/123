@@ -138,11 +138,9 @@ export default function ForInstitutionsPage() {
               Schedule a call <ArrowRight className="w-4 h-4" />
             </Button>
           </a>
-          <Link href="/dashboard">
-            <Button size="lg" variant="outline" className="rounded-full px-8 h-12">
-              Start posting bounties
-            </Button>
-          </Link>
+          <Button asChild size="lg" variant="outline" className="rounded-full px-8 h-12">
+            <Link href="/dashboard">Start posting bounties</Link>
+          </Button>
         </div>
       </section>
 
