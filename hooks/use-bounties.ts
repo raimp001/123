@@ -292,7 +292,9 @@ export function useCreateBounty() {
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create bounty')
+        const err = new Error(result.error || 'Failed to create bounty')
+        setError(err)
+        return { success: false, error: err.message, review: result.review }
       }
 
       return { success: true, bounty: result }

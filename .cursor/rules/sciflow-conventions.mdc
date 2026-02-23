@@ -1,0 +1,22 @@
+---
+description: SciFlowLabs coding and AI conventions
+alwaysApply: true
+---
+
+# SciFlowLabs Conventions
+
+See `AGENTS.md` for full guidelines. Key rules:
+
+## Lab fields
+Canonical DB columns: `institution_affiliation`, `location_country`, `description`, `specializations`. Use `toCanonicalLabWrite()` from `lib/normalize/lab.ts` before PATCH/insert.
+
+## Citations
+When referencing code: `\`\`\`startLine:endLine:path/to/file.tsx\`\`\`` — line numbers and path required.
+
+## Communication
+- Never mention tool names; describe actions naturally.
+- Use **bold** for key terms, `backticks` for code/file names.
+- Prefer parallel tool calls when gathering context.
+
+## Error handling
+Never catch without meaningful handling. Return actionable error messages to users.

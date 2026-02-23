@@ -16,7 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient }             from '@/lib/supabase/server'
 import { pinFile }                  from '@/lib/ipfs/pin'
 
-type Ctx = { params: { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(request: NextRequest, { params }: Ctx) {
   const supabase = await createClient()
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const milestoneId = params.id
+  const { id: milestoneId } = await params
 
   // ─ Fetch milestone + proposal ownership check ──────────────────────────
   const { data: milestone, error: msErr } = await supabase

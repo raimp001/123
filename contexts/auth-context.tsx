@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [dbUser, setDbUser] = useState<DbUser | null>(null)
   const [lab, setLab] = useState<Lab | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isBootstrapping, setIsBootstrapping] = useState(true)
   const authInProgress = useRef(false)
 
   const supabase = createClient()
@@ -59,14 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', userId)
       .single()
 
-    if (userData) {
-      setDbUser(userData)
-      if (userData.role === 'lab') {
-        const { data: labData } = await supabase
-          .from('labs').select('*').eq('user_id', userId).single()
-        setLab(labData)
-      }
+    if (!userData) {
+      setDbUser(null)
+      setLab(null)
+      return null
     }
+
+    setDbUser(userData)
+    if (userData.role === 'lab') {
+      const { data: labData } = await supabase
+        .from('labs').select('*').eq('user_id', userId).single()
+      setLab(labData)
+    } else {
+      setLab(null)
+    }
+
     return userData
   }, [supabase])
 
@@ -83,26 +91,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // On mount — check for existing Supabase session (persists across refreshes)
   useEffect(() => {
     if (!supabase) return
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    let mounted = true
+
+    supabase.auth.getSession().then(async (result: { data: { session: { user?: { id: string } } | null } }) => {
+      const session = result.data.session
+      if (!mounted) return
       if (session?.user) {
         setIsAuthenticated(true)
         const profile = await loadProfile(session.user.id)
         redirectNewUser(profile as DbUser | null)
-      }
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setIsAuthenticated(true)
-        await loadProfile(session.user.id)
-      } else if (event === 'SIGNED_OUT') {
+      } else {
         setIsAuthenticated(false)
         setDbUser(null)
         setLab(null)
       }
+      setIsBootstrapping(false)
+    }).catch(() => {
+      if (!mounted) return
+      setIsAuthenticated(false)
+      setDbUser(null)
+      setLab(null)
+      setIsBootstrapping(false)
     })
 
-    return () => subscription.unsubscribe()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user?: { id: string } } | null) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setIsAuthenticated(true)
+        const profile = await loadProfile(session.user.id)
+        redirectNewUser(profile as DbUser | null)
+        setIsBootstrapping(false)
+      } else if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false)
+        setDbUser(null)
+        setLab(null)
+        setIsBootstrapping(false)
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -200,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     idle: null,
   }[authStep]
 
-  const isLoading = authStep !== 'idle'
+  const isLoading = authStep !== 'idle' || isBootstrapping
 
   return (
     <AuthContext.Provider value={{

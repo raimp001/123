@@ -120,6 +120,10 @@ pnpm dev
 
 ---
 
+## AI Assistants
+
+See [AGENTS.md](./AGENTS.md) for conventions when using Cursor or other AI coding assistants on this codebase.
+
 ## Contributing
 
 PRs welcome. Please follow the existing commit convention:

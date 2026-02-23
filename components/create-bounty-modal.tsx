@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,6 +42,8 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { runOpenClawReview } from "@/lib/agents/openclaw-orchestrator"
 
+const DRAFT_KEY = "sciflow_bounty_draft"
+
 type Step = "basics" | "protocol" | "milestones" | "review"
 
 interface MilestoneInput {
@@ -52,10 +54,25 @@ interface MilestoneInput {
   daysToComplete: number
 }
 
-export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
+interface DraftState {
+  step: Step
+  title: string
+  description: string
+  category: string
+  budget: string
+  currency: "USD" | "USDC"
+  methodology: string
+  dataRequirements: string
+  qualityStandards: string
+  ethicsNotes: string
+  milestones: MilestoneInput[]
+}
+
+export function CreateBountyModal({ trigger, defaultOpen }: { trigger?: React.ReactNode; defaultOpen?: boolean }) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen ?? false)
   const [step, setStep] = useState<Step>("basics")
+  const [hasDraft, setHasDraft] = useState(false)
   const { createBounty, isCreating } = useCreateBounty()
   
   // Form state
@@ -161,6 +178,48 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
     }
   }
 
+  const saveDraft = () => {
+    if (typeof window === "undefined") return
+    const draft: DraftState = {
+      step, title, description, category, budget, currency,
+      methodology, dataRequirements, qualityStandards, ethicsNotes, milestones,
+    }
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+    } catch { /* ignore */ }
+  }
+
+  const loadDraft = () => {
+    if (typeof window === "undefined") return
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const draft = JSON.parse(raw) as DraftState
+      setStep(draft.step)
+      setTitle(draft.title)
+      setDescription(draft.description)
+      setCategory(draft.category)
+      setBudget(draft.budget)
+      setCurrency(draft.currency)
+      setMethodology(draft.methodology)
+      setDataRequirements(draft.dataRequirements)
+      setQualityStandards(draft.qualityStandards)
+      setEthicsNotes(draft.ethicsNotes)
+      setMilestones(draft.milestones?.length ? draft.milestones : milestones)
+      setHasDraft(false)
+      localStorage.removeItem(DRAFT_KEY)
+    } catch { /* ignore */ }
+  }
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) saveDraft()
+    setOpen(next)
+  }
+
+  useEffect(() => {
+    if (open) setHasDraft(typeof window !== "undefined" && !!localStorage.getItem(DRAFT_KEY))
+  }, [open])
+
   const handleCreate = async () => {
     if (!title.trim() || !description.trim() || !methodology.trim() || budgetNumber <= 0) {
       toast.error("Please complete title, description, methodology, and budget")
@@ -178,7 +237,8 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
     }
 
     if (openClawPreview.decision === "reject") {
-      toast.error("OpenClaw flagged this bounty as high risk. Revise before submitting.")
+      const firstSignal = openClawPreview.signals[0]?.message
+      toast.error(firstSignal ?? "OpenClaw flagged this bounty as high risk. Revise the signals above and resubmit.")
       return
     }
 
@@ -201,18 +261,23 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
     })
 
     if (!result.success || !result.bounty) {
-      toast.error(result.error || "Failed to create bounty")
+      const errMsg = result.error ?? "Failed to create bounty"
+      const review = 'review' in result ? result.review : undefined
+      const signals = review?.signals as Array<{ message: string }> | undefined
+      const detail = signals?.[0]?.message
+      toast.error(detail ? `${errMsg}: ${detail}` : errMsg)
       return
     }
 
     toast.success("Bounty submitted for admin review")
+    if (typeof window !== "undefined") localStorage.removeItem(DRAFT_KEY)
     setOpen(false)
     setStep("basics")
     router.push(`/dashboard/bounties/${result.bounty.id}`)
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         {trigger || (
           <Button className="bg-navy-800 hover:bg-navy-700 text-white">
@@ -229,7 +294,17 @@ export function CreateBountyModal({ trigger }: { trigger?: React.ReactNode }) {
           </SheetDescription>
         </SheetHeader>
 
+        {hasDraft && (
+          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2">
+            <p className="text-sm text-amber-700 dark:text-amber-400">You have a saved draft.</p>
+            <Button variant="outline" size="sm" onClick={loadDraft} className="text-amber-700 border-amber-500/30 hover:bg-amber-500/20">
+              Resume draft
+            </Button>
+          </div>
+        )}
+
         {/* Progress Steps */}
+        <p className="text-xs text-muted-foreground mb-2">Step {currentStepIndex + 1} of {steps.length}</p>
         <div className="flex items-center justify-between mt-6 mb-8">
           {steps.map((s, idx) => {
             const Icon = s.icon

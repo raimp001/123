@@ -13,9 +13,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Shield, ShieldCheck, Building2, Star, ExternalLink, Plus, RefreshCw } from "lucide-react"
+import { Search, Shield, ShieldCheck, Building2, Star, ExternalLink, Plus, RefreshCw, HelpCircle } from "lucide-react"
 import { useLabs } from "@/hooks/use-labs"
 import Link from "next/link"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+const TIER_HELP =
+  "Basic: email verified. Verified: full KYC. Trusted: successful track record. Institutional: university/company verified."
 
 const tierConfig: Record<string, { label: string; color: string; icon: typeof Shield }> = {
   unverified: { label: "Unverified", color: "bg-secondary text-muted-foreground", icon: Shield },
@@ -39,6 +48,7 @@ export default function LabsPage() {
   const isEmpty = !isLoading && !hasError && labs.length === 0
 
   return (
+    <TooltipProvider>
     <div className="max-w-4xl mx-auto space-y-6 py-2">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -61,6 +71,7 @@ export default function LabsPage() {
             className="pl-10"
           />
         </div>
+        <div className="flex items-center gap-1">
         <Select value={tierFilter} onValueChange={setTierFilter}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="All tiers" />
@@ -73,6 +84,17 @@ export default function LabsPage() {
             <SelectItem value="basic">Basic</SelectItem>
           </SelectContent>
         </Select>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex cursor-help text-muted-foreground hover:text-foreground">
+              <HelpCircle className="w-4 h-4" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs">
+            {TIER_HELP}
+          </TooltipContent>
+        </Tooltip>
+        </div>
       </div>
 
       {/* Labs Grid */}
@@ -134,10 +156,15 @@ export default function LabsPage() {
                       {[lab.institution, lab.country].filter(Boolean).join(" · ")}
                     </p>
                   </div>
-                  <Badge className={`${tier.color} text-xs flex-shrink-0`}>
-                    <TierIcon className="w-3 h-3 mr-1" />
-                    {tier.label}
-                  </Badge>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge className={`${tier.color} text-xs flex-shrink-0 cursor-help`}>
+                        <TierIcon className="w-3 h-3 mr-1" />
+                        {tier.label}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>{TIER_HELP}</TooltipContent>
+                  </Tooltip>
                 </div>
 
                 {lab.specialties && lab.specialties.length > 0 && (
@@ -156,15 +183,22 @@ export default function LabsPage() {
                 )}
 
                 <div className="flex items-center justify-between pt-3 border-t border-border/30">
-                  <div className="flex items-center gap-1 text-xs">
-                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                    <span className="text-foreground font-medium">
-                      {lab.reputation_score?.toFixed(1) || "—"}
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2">
-                    View <ExternalLink className="w-3 h-3 ml-1" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 text-xs cursor-help">
+                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                        <span className="text-foreground font-medium">
+                          {lab.reputation_score?.toFixed(1) || "—"}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Reputation score from completed bounties</TooltipContent>
+                  </Tooltip>
+                  <Link href={`/labs/${lab.id}`}>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-foreground px-2">
+                      View <ExternalLink className="w-3 h-3 ml-1" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
             )
@@ -172,5 +206,6 @@ export default function LabsPage() {
         </div>
       )}
     </div>
+    </TooltipProvider>
   )
 }

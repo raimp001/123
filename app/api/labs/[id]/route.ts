@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { z } from 'zod'
+import { toCanonicalLabWrite } from '@/lib/normalize/lab'
 
 // GET /api/labs/[id] - Get lab details
 export async function GET(
@@ -64,19 +64,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Not authorized to update this lab' }, { status: 403 })
     }
 
-    // Parse body
+    // Parse body — accept both canonical and legacy alias field names
     const body = await request.json()
-    
-    // Only allow updating certain fields
-    const allowedFields = ['name', 'institution', 'bio', 'website', 'country', 'expertise_areas', 'equipment', 'publications']
-    const updateData: Record<string, unknown> = {}
-    
+    const allowedFields = ['name', 'institution', 'institution_affiliation', 'bio', 'description', 'website', 'country', 'location_country', 'expertise_areas', 'specializations', 'specialties', 'team_size']
+    const rawUpdate: Record<string, unknown> = {}
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field]
+        rawUpdate[field] = body[field]
       }
     }
-
+    const updateData = toCanonicalLabWrite(rawUpdate as Record<string, unknown>) as Record<string, unknown>
     updateData.updated_at = new Date().toISOString()
 
     const { data: updatedLab, error: updateError } = await supabase

@@ -22,23 +22,33 @@ export function normalizeLab(lab: Lab): NormalizedLab {
 
 /**
  * Strip deprecated alias fields before writing to Supabase.
- * Canonical columns: institution_affiliation, location_country, specializations.
+ * Canonical columns: institution_affiliation, location_country, description, specializations.
  */
 export function toCanonicalLabWrite(input: Partial<Lab>): Partial<Lab> {
   const out = { ...input }
   // Merge aliases into canonical fields
-  if (!out.institution_affiliation && out.institution) {
-    out.institution_affiliation = out.institution
+  if (!out.institution_affiliation && (out as Record<string, unknown>).institution) {
+    out.institution_affiliation = (out as Record<string, unknown>).institution as string
   }
-  if (!out.location_country && out.country) {
-    out.location_country = out.country
+  if (!out.location_country && (out as Record<string, unknown>).country) {
+    out.location_country = (out as Record<string, unknown>).country as string
   }
-  if ((!out.specializations || out.specializations.length === 0) && out.specialties?.length) {
-    out.specializations = out.specialties
+  if (!out.description && (out as Record<string, unknown>).bio) {
+    out.description = (out as Record<string, unknown>).bio as string
+  }
+  if ((!out.specializations || out.specializations.length === 0)) {
+    const specialties = (out as Record<string, unknown>).specialties as string[] | undefined
+    const expertiseAreas = (out as Record<string, unknown>).expertise_areas as string[] | undefined
+    if (specialties?.length) out.specializations = specialties
+    else if (expertiseAreas?.length) out.specializations = expertiseAreas
   }
   // Remove alias fields so they are never written
-  delete out.institution
-  delete out.country
-  delete out.specialties
+  delete (out as Record<string, unknown>).institution
+  delete (out as Record<string, unknown>).country
+  delete (out as Record<string, unknown>).bio
+  delete (out as Record<string, unknown>).specialties
+  delete (out as Record<string, unknown>).expertise_areas
+  delete (out as Record<string, unknown>).equipment
+  delete (out as Record<string, unknown>).publications
   return out
 }

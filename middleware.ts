@@ -11,45 +11,52 @@ const hasSupabase = !!(
 //   general  — 20 req / 10 s  (all /api/* except auth & payments)
 //   sensitive — 10 req / 10 s  (/api/auth/* and /api/payments/*)
 //
-// Uses Vercel KV (Redis) via @upstash/ratelimit.
-// Set KV_REST_API_URL and KV_REST_API_TOKEN in Vercel project env.
+// Lightweight in-process fallback limiter. This avoids hard runtime deps
+// and still provides basic protection per instance.
 // Stripe webhooks (/api/webhooks/*) are EXCLUDED from rate limiting.
 
-const hasKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
-
 type RateLimitResult = { success: boolean; limit: number; remaining: number; reset: number }
+type LocalBucket = { count: number; resetAt: number }
+
+const localBuckets = new Map<string, LocalBucket>()
 
 async function checkRateLimit(
   key: string,
   max: number,
   windowSeconds: number
 ): Promise<RateLimitResult> {
-  if (!hasKV) {
-    // KV not configured (local dev) — always allow
-    return { success: true, limit: max, remaining: max, reset: 0 }
+  const now = Date.now()
+  const windowMs = windowSeconds * 1000
+  const current = localBuckets.get(key)
+
+  if (!current || current.resetAt <= now) {
+    localBuckets.set(key, { count: 1, resetAt: now + windowMs })
+    return {
+      success: true,
+      limit: max,
+      remaining: Math.max(0, max - 1),
+      reset: now + windowMs,
+    }
   }
 
-  try {
-    // Dynamic import so build succeeds without KV env vars
-    const { Ratelimit } = await import('@upstash/ratelimit')
-    const { kv } = await import('@vercel/kv')
+  const nextCount = current.count + 1
+  current.count = nextCount
+  localBuckets.set(key, current)
 
-    const ratelimit = new Ratelimit({
-      redis: kv,
-      limiter: Ratelimit.slidingWindow(max, `${windowSeconds} s`),
-      prefix: 'sciflow_rl',
-    })
-
-    const result = await ratelimit.limit(key)
+  if (nextCount > max) {
     return {
-      success: result.success,
-      limit: result.limit,
-      remaining: result.remaining,
-      reset: result.reset,
+      success: false,
+      limit: max,
+      remaining: 0,
+      reset: current.resetAt,
     }
-  } catch {
-    // Fail open — never block requests due to KV errors
-    return { success: true, limit: max, remaining: max, reset: 0 }
+  }
+
+  return {
+    success: true,
+    limit: max,
+    remaining: Math.max(0, max - nextCount),
+    reset: current.resetAt,
   }
 }
 

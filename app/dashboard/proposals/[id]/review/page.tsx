@@ -16,14 +16,21 @@
  */
 
 import { useState, useEffect } from 'react'
-import { useRouter }           from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { HelpCircle } from 'lucide-react'
 
 const SCORE_FIELDS = [
-  { key: 'score_scientific_merit',    label: 'Scientific Merit',       weight: '30%' },
-  { key: 'score_feasibility',         label: 'Feasibility',            weight: '20%' },
-  { key: 'score_innovation',          label: 'Innovation',             weight: '20%' },
-  { key: 'score_team_qualifications', label: 'Team Qualifications',    weight: '15%' },
-  { key: 'score_ethics_compliance',   label: 'Ethics Compliance',      weight: '15%' },
+  { key: 'score_scientific_merit',    label: 'Scientific Merit',       weight: '30%', help: 'Rigor of research question, methodology, and anticipated impact on the field.' },
+  { key: 'score_feasibility',         label: 'Feasibility',            weight: '20%', help: 'Can the lab deliver within budget and timeline? Realistic milestones and resources?' },
+  { key: 'score_innovation',          label: 'Innovation',             weight: '20%', help: 'Novelty of approach, originality, or advancement over existing methods.' },
+  { key: 'score_team_qualifications', label: 'Team Qualifications', weight: '15%', help: 'Relevant expertise, publications, and capacity to execute the protocol.' },
+  { key: 'score_ethics_compliance',   label: 'Ethics Compliance',      weight: '15%', help: 'IRB/ethics adherence, data handling, informed consent, and safety measures.' },
 ] as const
 
 const WEIGHTS: Record<string, number> = {
@@ -119,6 +126,7 @@ export default function ProposalReviewPage({ params }: { params: { id: string } 
   }
 
   return (
+    <TooltipProvider>
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <div className="max-w-3xl mx-auto px-6 py-10">
         {/* Header */}
@@ -140,12 +148,22 @@ export default function ProposalReviewPage({ params }: { params: { id: string } 
               <span className="ml-2 text-xs text-gray-500 font-normal">(1 = poor → 5 = excellent)</span>
             </h2>
 
-            {SCORE_FIELDS.map(({ key, label, weight }) => (
+            {SCORE_FIELDS.map(({ key, label, weight, help }) => (
               <div key={key}>
                 <div className="flex justify-between items-center mb-1">
-                  <label className="text-sm text-gray-300">
+                  <label className="text-sm text-gray-300 flex items-center gap-1.5">
                     {label}
                     <span className="ml-1 text-gray-600 text-xs">({weight})</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-help text-gray-500 hover:text-gray-400">
+                          <HelpCircle className="w-3.5 h-3.5" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs bg-zinc-900 text-gray-200">
+                        {help}
+                      </TooltipContent>
+                    </Tooltip>
                   </label>
                   <span className={`text-lg font-bold tabular-nums ${scoreColor(scores[key])}`}>
                     {scores[key]}
@@ -230,7 +248,19 @@ export default function ProposalReviewPage({ params }: { params: { id: string } 
 
           {/* Conflict of interest */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-            <h2 className="font-semibold text-white mb-3">Conflict of Interest</h2>
+            <h2 className="font-semibold text-white mb-3 flex items-center gap-1.5">
+              Conflict of Interest
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-help text-gray-500 hover:text-gray-400">
+                    <HelpCircle className="w-3.5 h-3.5" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs bg-zinc-900 text-gray-200">
+                  Declare if you have a personal, financial, or professional relationship with the lab that could bias your review (e.g., collaboration, funding, co-authorship).
+                </TooltipContent>
+              </Tooltip>
+            </h2>
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -298,5 +328,6 @@ export default function ProposalReviewPage({ params }: { params: { id: string } 
         </form>
       </div>
     </div>
+    </TooltipProvider>
   )
 }

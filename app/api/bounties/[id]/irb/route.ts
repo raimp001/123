@@ -19,7 +19,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient }             from '@/lib/supabase/server'
 import { pinFile }                  from '@/lib/ipfs/pin'
 
-type Ctx = { params: { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // 20 MB limit for IRB PDFs
 const MAX_BYTES = 20 * 1024 * 1024
@@ -35,7 +35,7 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const bountyId = params.id
+  const { id: bountyId } = await params
 
   // Verify ownership or admin
   const { data: bounty } = await supabase
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const bountyId = params.id
+  const { id: bountyId } = await params
 
   // Check bounty ownership
   const { data: bounty, error: bountyErr } = await supabase

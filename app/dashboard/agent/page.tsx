@@ -1,14 +1,33 @@
 "use client"
 
+const BASE_URL = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL ?? '')
+
 import { useChat } from 'ai/react'
 import { usePrivy } from '@privy-io/react-auth'
-import { useState, useRef, useEffect } from 'react'
+import { useAuth } from '@/contexts/auth-context'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const SUGGESTIONS = [
+const SUGGESTIONS_FUNDER = [
+  'Draft a bounty to validate a new cancer biomarker with CRISPR',
+  'What budget should I set for a 3-month protein folding study?',
+  'List my bounties that need attention',
+  'What evidence should a lab provide for milestone 1?',
+]
+
+const SUGGESTIONS_LAB = [
+  'What open bounties match my specialties?',
+  'Show me proposals I have pending',
+  'What budget should I bid for a 60-day genomics study?',
+  'How do I submit milestone evidence?',
+]
+
+const SUGGESTIONS_DEFAULT = [
   'Draft a bounty to validate a new cancer biomarker with CRISPR',
   'What budget should I set for a 3-month protein folding study?',
   'Review this proposal: 60 days, $45k, gene editing in human cells',
@@ -32,7 +51,32 @@ function MessageBubble({ role, content }: { role: string; content: string }) {
             : 'bg-secondary/50 text-foreground rounded-tl-sm'
         )}
       >
-        {content}
+        {isUser ? (
+          content
+        ) : (
+          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 prose-headings:my-2 prose-pre:my-2 prose-table:text-sm prose-a:text-accent prose-a:no-underline hover:prose-a:underline prose-code:bg-muted prose-code:px-1 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: ({ href, children }) => {
+                  const isInternal = href?.startsWith('/') || href?.includes(BASE_URL || 'localhost')
+                  return (
+                    <a
+                      href={href}
+                      target={isInternal ? undefined : '_blank'}
+                      rel={isInternal ? undefined : 'noopener noreferrer'}
+                      className="text-accent"
+                    >
+                      {children}
+                    </a>
+                  )
+                },
+              }}
+            >
+              {content}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
       {isUser && (
         <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center shrink-0 mt-0.5">
@@ -45,6 +89,12 @@ function MessageBubble({ role, content }: { role: string; content: string }) {
 
 export default function AgentPage() {
   const { getAccessToken } = usePrivy()
+  const { dbUser } = useAuth()
+  const suggestions = useMemo(() => {
+    if (dbUser?.role === 'funder') return SUGGESTIONS_FUNDER
+    if (dbUser?.role === 'lab') return SUGGESTIONS_LAB
+    return SUGGESTIONS_DEFAULT
+  }, [dbUser?.role])
   const { messages, input, handleInputChange, handleSubmit, isLoading, setInput } = useChat({
     api: '/api/agent',
     headers: async () => {
@@ -87,7 +137,7 @@ export default function AgentPage() {
               Ask me anything about structuring research bounties.
             </p>
             <div className="grid grid-cols-1 gap-2">
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button
                   key={s}
                   onClick={() => useSuggestion(s)}

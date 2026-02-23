@@ -3,6 +3,7 @@ import { normalizeLab } from '@/lib/normalize/lab'
 import type { Bounty } from '@/types/database'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { LabStakingHelp, LabTierBadge } from '@/components/lab-profile-tooltips'
 
 export const revalidate = 300
 
@@ -70,11 +71,13 @@ export default async function LabProfilePage({
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="font-serif text-3xl font-bold text-white">{lab.name}</h1>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
-                  TIER_BADGE[lab.verification_tier] ?? 'bg-zinc-800 text-zinc-400'
-                }`}>
-                  {lab.verification_tier}
-                </span>
+                <LabTierBadge>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
+                    TIER_BADGE[lab.verification_tier] ?? 'bg-zinc-800 text-zinc-400'
+                  }`}>
+                    {lab.verification_tier}
+                  </span>
+                </LabTierBadge>
               </div>
               {lab.institution_canonical && (
                 <p className="text-zinc-400 text-sm mb-1">{lab.institution_canonical}</p>
@@ -201,10 +204,14 @@ export default async function LabProfilePage({
             {/* Staking info */}
             <div>
               <h3 className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-2">Staking</h3>
-              <p className="text-sm text-white font-semibold">
-                ${(lab.staking_balance ?? 0).toLocaleString()} USDC
-              </p>
-              <p className="text-xs text-zinc-600 mt-0.5">Available stake balance</p>
+              <LabStakingHelp>
+                <div>
+                  <p className="text-sm text-white font-semibold">
+                    ${(lab.staking_balance ?? 0).toLocaleString()} USDC
+                  </p>
+                  <p className="text-xs text-zinc-600 mt-0.5">Available stake balance</p>
+                </div>
+              </LabStakingHelp>
             </div>
 
             {/* CTA */}

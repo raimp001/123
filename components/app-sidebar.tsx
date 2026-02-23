@@ -16,16 +16,25 @@ import {
   Send,
   CheckSquare,
   DollarSign,
+  HelpCircle,
+  type LucideIcon,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { ConnectWalletButton } from "@/components/connect-wallet-button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
+type NavItem = {
+  title: string
+  url: string
+  icon: LucideIcon
+  action?: boolean
+}
+
 // ── Funder nav — funds research ──────────────────────────────────
-const funderNav = [
+const funderNav: NavItem[] = [
   { title: "Home",              url: "/dashboard",               icon: Home },
-  { title: "Fund Research",     url: "/dashboard/bounties/new",  icon: DollarSign,    action: true },
+  { title: "Fund Research",     url: "/dashboard/bounties/new", icon: DollarSign,    action: true },
   { title: "My Projects",       url: "/dashboard/bounties",      icon: FileText },
   { title: "Find Labs",         url: "/dashboard/labs",          icon: FlaskConical },
   { title: "Payments & Escrow", url: "/dashboard/escrow",        icon: Wallet },
@@ -33,7 +42,7 @@ const funderNav = [
 ]
 
 // ── Lab nav — does the research ──────────────────────────────────
-const labNav = [
+const labNav: NavItem[] = [
   { title: "Home",            url: "/dashboard",               icon: Home },
   { title: "Find Projects",   url: "/dashboard/open-bounties", icon: Search },
   { title: "My Applications", url: "/dashboard/proposals",     icon: Send },
@@ -42,14 +51,15 @@ const labNav = [
 ]
 
 // ── Default nav (not onboarded yet) ─────────────────────────────
-const defaultNav = [
+const defaultNav: NavItem[] = [
   { title: "Home",        url: "/dashboard",               icon: Home },
   { title: "Browse Open Projects", url: "/dashboard/open-bounties", icon: CircleDollarSign },
   { title: "Labs",        url: "/dashboard/labs",          icon: FlaskConical },
   { title: "AI Assistant", url: "/dashboard/agent",        icon: Sparkles },
 ]
 
-const bottomNav = [
+const bottomNav: NavItem[] = [
+  { title: "Help & Glossary", url: "/help", icon: HelpCircle },
   { title: "Settings", url: "/settings", icon: Settings },
 ]
 
@@ -121,7 +131,7 @@ export function AppSidebar() {
                 ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                 : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
               // Highlight the primary action
-              'action' in item && item.action && !isActive(item.url) &&
+              item.action && !isActive(item.url) &&
                 "text-accent/90 hover:text-accent"
             )}
           >

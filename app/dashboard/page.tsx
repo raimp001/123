@@ -68,7 +68,7 @@ function FunderDashboard() {
               {stats.needsAttention} milestone{stats.needsAttention > 1 ? 's' : ''} submitted — review and approve to release payment
             </p>
           </div>
-          <Link href="/dashboard/bounties">
+          <Link href="/dashboard/bounties?state=milestone_review">
             <Button size="sm" className="rounded-full bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 border-0">
               Review now →
             </Button>
@@ -294,7 +294,8 @@ export default function DashboardPage() {
   if (!isAuthenticated) return <WelcomeDashboard />
 
   const role = dbUser?.role
-  if (!role || role === 'funder' || role === 'admin') return <FunderDashboard />
+  if (!role) return <WelcomeDashboard />
+  if (role === 'funder' || role === 'admin') return <FunderDashboard />
   if (role === 'lab') return <LabDashboard />
   return <WelcomeDashboard />
 }

@@ -3,9 +3,10 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, Send, Clock, Plus, Bell } from "lucide-react"
+import { Search, Send, Clock, Plus, Bell, Sparkles } from "lucide-react"
 import { useBounties } from "@/hooks/use-bounties"
-import { useState } from "react"
+import { useAuth } from "@/contexts/auth-context"
+import { useState, useMemo } from "react"
 import { useDebounce } from "@/hooks/use-debounce"
 import Link from "next/link"
 
@@ -22,6 +23,7 @@ export default function OpenBountiesPage() {
   const [search, setSearch] = useState("")
   const [notifyEmail, setNotifyEmail] = useState("")
   const debouncedSearch = useDebounce(search)
+  const { lab } = useAuth()
 
   const { bounties, isLoading, error } = useBounties({
     state: "bidding",
@@ -36,6 +38,23 @@ export default function OpenBountiesPage() {
 
   const hasError = error !== null
   const isEmpty = !isLoading && !hasError && bounties.length === 0
+
+  const labSpecializations = (lab?.specializations ?? lab?.specialties ?? []) as string[]
+  const specSet = useMemo(() => new Set(labSpecializations.map(s => s.toLowerCase())), [labSpecializations])
+  const { recommended, other } = useMemo(() => {
+    if (!bounties.length) return { recommended: [] as typeof bounties, other: [] as typeof bounties }
+    const rec: typeof bounties = []
+    const rest: typeof bounties = []
+    for (const b of bounties) {
+      const tags = (b.tags ?? []) as string[]
+      const match = tags.some(t => specSet.has(String(t).toLowerCase()))
+      if (match && labSpecializations.length > 0) rec.push(b)
+      else rest.push(b)
+    }
+    return { recommended: rec, other: rest }
+  }, [bounties, specSet, labSpecializations.length])
+
+  const displayBounties = recommended.length > 0 ? [...recommended, ...other] : bounties
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-2">
@@ -111,8 +130,15 @@ export default function OpenBountiesPage() {
         </div>
       ) : (
         <div className="divide-y divide-border/30 border border-border/40 rounded-xl overflow-hidden">
-          {bounties.map((bounty) => (
+          {displayBounties.map((bounty) => {
+            const isRecommended = recommended.some(r => r.id === bounty.id)
+            return (
             <div key={bounty.id} className="p-5 hover:bg-secondary/10 transition-colors">
+              {isRecommended && (
+                <div className="flex items-center gap-1.5 mb-2 text-xs text-amber-600 dark:text-amber-400">
+                  <Sparkles className="w-3.5 h-3.5" /> Matches your specialties
+                </div>
+              )}
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="min-w-0">
                   <h3 className="font-medium text-sm text-foreground mb-1 truncate">{bounty.title}</h3>
@@ -141,7 +167,8 @@ export default function OpenBountiesPage() {
                 </Link>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

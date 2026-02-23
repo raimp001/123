@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -77,15 +78,25 @@ function riskPriority(level: OpenClawRiskLevel | null) {
 }
 
 export default function BountiesPage() {
-  const { isAdmin } = useAuth()
-  const [filter, setFilter] = useState("all")
+  const { isAdmin, isFunder } = useAuth()
+  const searchParams = useSearchParams()
+  const stateFromUrl = searchParams.get("state")
+  const [filter, setFilter] = useState(stateFromUrl || "all")
+
+  useEffect(() => {
+    if (stateFromUrl && ["milestone_review", "admin_review", "bidding", "active_research", "completed"].includes(stateFromUrl)) {
+      setFilter(stateFromUrl)
+    }
+  }, [stateFromUrl])
   const [search, setSearch] = useState("")
+  const createFromUrl = searchParams.get("create") === "1"
   const [adminView, setAdminView] = useState<"all" | "queue" | "high_risk">("all")
   const debouncedSearch = useDebounce(search)
   
   const { bounties, isLoading, error, pagination } = useBounties({
     state: filter === "all" ? undefined : filter,
     search: debouncedSearch || undefined,
+    myBounties: isFunder && !isAdmin,
   })
 
   const decoratedBounties = useMemo(
@@ -151,7 +162,7 @@ export default function BountiesPage() {
             Track funding lifecycle and OpenClaw risk signals from one queue.
           </p>
         </div>
-        <CreateBountyModal />
+        <CreateBountyModal defaultOpen={createFromUrl} />
       </div>
 
       {/* Stats */}
@@ -269,6 +280,7 @@ export default function BountiesPage() {
           </p>
           {!search && (
             <CreateBountyModal 
+              defaultOpen={createFromUrl}
               trigger={
                 <Button>
                   <Plus className="w-4 h-4 mr-2" /> Create Bounty
