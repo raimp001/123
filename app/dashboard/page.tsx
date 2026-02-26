@@ -279,15 +279,9 @@ function WelcomeDashboard() {
 export default function DashboardPage() {
   const { dbUser, isAuthenticated, isLoading } = useAuth()
 
-  if (isLoading) {
-    return (
-      <div className="max-w-3xl mx-auto space-y-6 py-2">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-48 rounded-xl" />
-      </div>
-    )
-  }
+// While bootstrapping, show WelcomeDashboard (safe default)
+  // It will re-render instantly when auth state resolves
+  if (isLoading && !dbUser) return <WelcomeDashboard />
 
   if (!isAuthenticated) return <WelcomeDashboard />
 
