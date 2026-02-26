@@ -1,8 +1,13 @@
 "use client"
 
 import {
-  createContext, useContext, useEffect, useState,
-  useCallback, useRef, type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
 } from 'react'
 import { useAccount, useConnect, useDisconnect, useSignMessage } from 'wagmi'
 import { base } from 'wagmi/chains'
@@ -67,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setDbUser(userData)
+
     if (userData.role === 'lab') {
       const { data: labData } = await supabase
         .from('labs').select('*').eq('user_id', userId).single()
@@ -78,12 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return userData
   }, [supabase])
 
-  // Redirect new users to onboarding
+  // Redirect new users (or incomplete onboarding) to /onboarding
+  // Checks onboarding_completed flag — NOT role (since role has a DB default)
   const redirectNewUser = useCallback((profile: DbUser | null) => {
     if (typeof window === 'undefined') return
     const isOnboarding = window.location.pathname === '/onboarding'
-    const isAuth = window.location.pathname.startsWith('/login') || window.location.pathname.startsWith('/signup')
-    if (!isOnboarding && !isAuth && profile && !profile.role) {
+    const isAuth = window.location.pathname.startsWith('/login') ||
+      window.location.pathname.startsWith('/signup')
+
+    if (!isOnboarding && !isAuth && profile && !profile.onboarding_completed) {
       window.location.href = '/onboarding'
     }
   }, [])
@@ -114,34 +123,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsBootstrapping(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: { user?: { id: string } } | null) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setIsAuthenticated(true)
-        const profile = await loadProfile(session.user.id)
-        redirectNewUser(profile as DbUser | null)
-        setIsBootstrapping(false)
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false)
-        setDbUser(null)
-        setLab(null)
-        setIsBootstrapping(false)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: string, session: { user?: { id: string } } | null) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          setIsAuthenticated(true)
+          const profile = await loadProfile(session.user.id)
+          redirectNewUser(profile as DbUser | null)
+          setIsBootstrapping(false)
+        } else if (event === 'SIGNED_OUT') {
+          setIsAuthenticated(false)
+          setDbUser(null)
+          setLab(null)
+          setIsBootstrapping(false)
+        }
       }
-    })
+    )
 
     return () => {
       mounted = false
       subscription.unsubscribe()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // When wallet connects while we're in the "connecting" step, run auth
   useEffect(() => {
     if (isConnected && address && authStep === 'connecting' && !authInProgress.current) {
       authInProgress.current = true
-      authenticateWallet(address).finally(() => { authInProgress.current = false })
+      authenticateWallet(address).finally(() => {
+        authInProgress.current = false
+      })
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, address, authStep])
 
   const authenticateWallet = async (walletAddress: string) => {
@@ -165,7 +178,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: walletAddress, signature, message }),
       })
-
       const authData = await authRes.json()
       if (!authRes.ok) {
         throw new Error(authData.error || `Server error (${authRes.status})`)
@@ -175,7 +187,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Sign into Supabase — creates a persistent session
       if (supabase) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: tempPassword })
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password: tempPassword,
+        })
         if (signInError) throw signInError
       }
 
@@ -232,26 +247,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLoading = authStep !== 'idle' || isBootstrapping
 
   return (
-    <AuthContext.Provider value={{
-      isAuthenticated,
-      isLoading,
-      walletAddress: address ?? null,
-      authStep,
-      authError,
-      dbUser,
-      lab,
-      isFunder: dbUser?.role === 'funder' || dbUser?.role === 'admin',
-      isLab: dbUser?.role === 'lab',
-      isAdmin: dbUser?.role === 'admin',
-      connectWallet,
-      disconnectWallet,
-      refreshUser,
-    }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        isLoading,
+        walletAddress: address ?? null,
+        authStep,
+        authError,
+        dbUser,
+        lab,
+        isFunder: dbUser?.role === 'funder',
+        isLab: dbUser?.role === 'lab',
+        isAdmin: dbUser?.role === 'admin',
+        connectWallet,
+        disconnectWallet,
+        refreshUser,
+      }}
+    >
       {/* Auth step banner */}
       {authStep !== 'idle' && (
-        <div className="fixed top-0 inset-x-0 z-50 bg-accent/10 border-b border-accent/20 px-4 py-2 flex items-center justify-center gap-2">
-          <span className="animate-spin text-accent text-xs">⟳</span>
-          <span className="text-sm text-foreground">{stepLabel}</span>
+        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500/90 text-black text-sm font-medium py-2 px-4 text-center">
+          ↻  {stepLabel}
         </div>
       )}
       {children}
