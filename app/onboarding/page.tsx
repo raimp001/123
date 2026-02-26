@@ -1,8 +1,10 @@
 "use client"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Loader2, Building2, FlaskConical, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
 
 const ROLES = [
   {
@@ -28,6 +30,8 @@ const ROLES = [
 export default function OnboardingPage() {
   const [selected, setSelected] = useState<"funder" | "lab" | null>(null)
   const [saving, setSaving] = useState(false)
+  const router = useRouter()
+  const { refreshUser } = useAuth()
 
   const handleContinue = async () => {
     if (!selected) return
@@ -38,6 +42,7 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: selected, onboarding_completed: true }),
       })
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         const errorMsg = data?.error || `Server error (${res.status})`
@@ -46,9 +51,13 @@ export default function OnboardingPage() {
         setSaving(false)
         return
       }
+
+      // Refresh auth context so dbUser.role is updated immediately
+      await refreshUser()
+
       toast.success("Welcome to SciFlow!")
-      // Navigate immediately - dashboard will load fresh profile
-      window.location.href = '/dashboard'
+      // Use Next.js router so auth context stays mounted
+      router.push('/dashboard')
     } catch (err) {
       console.error('[Onboarding] Unexpected error:', err)
       toast.error("Something went wrong — please try again")
@@ -57,17 +66,18 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-background">
       {/* Header */}
-      <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center text-white text-2xl font-bold mb-6">
-        S
+      <div className="mb-8 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl mx-auto mb-4">
+          S
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome to SciFlow</h1>
+        <p className="text-muted-foreground mt-2">What best describes you? We'll set up your workspace accordingly.</p>
       </div>
-      <h1 className="text-3xl font-bold mb-2">Welcome to SciFlow</h1>
-      <p className="text-muted-foreground mb-8 text-center">
-        What best describes you? We&apos;ll set up your workspace accordingly.
-      </p>
+
       {/* Role selection */}
-      <div className="w-full max-w-lg space-y-4 mb-8">
+      <div className="w-full max-w-lg space-y-3 mb-6">
         {ROLES.map(role => {
           const isSelected = selected === role.id
           const Icon = role.icon
@@ -78,40 +88,34 @@ export default function OnboardingPage() {
               data-selected={isSelected}
               className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-150 ${role.color}`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <Icon className={`w-8 h-8 mt-0.5 shrink-0 ${role.iconColor}`} />
-                  <div>
-                    <div className="font-semibold text-lg">{role.title}</div>
-                    <div className="text-sm text-muted-foreground mt-1">{role.subtitle}</div>
-                    <div className="text-xs text-muted-foreground/70 mt-2">{role.who}</div>
-                  </div>
+              <div className="flex items-start gap-4">
+                <Icon className={`w-6 h-6 mt-0.5 shrink-0 ${role.iconColor}`} />
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">{role.title}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{role.subtitle}</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1.5">{role.who}</p>
                 </div>
-                {isSelected && <CheckCircle className="w-5 h-5 text-green-400 shrink-0 ml-4" />}
+                {isSelected && <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />}
               </div>
             </button>
           )
         })}
       </div>
+
       {/* Continue */}
       <Button
         onClick={handleContinue}
         disabled={!selected || saving}
-        className="w-full max-w-lg"
-        size="lg"
+        className="w-full max-w-lg h-12 rounded-2xl text-base font-semibold"
       >
         {saving ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Setting up your workspace…
-          </>
+          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Setting up your workspace…</>
         ) : (
           'Continue →'
         )}
       </Button>
-      <p className="text-xs text-muted-foreground mt-4">
-        You can change this later in Settings.
-      </p>
+
+      <p className="text-xs text-muted-foreground mt-4">You can change this later in Settings.</p>
     </div>
   )
 }
