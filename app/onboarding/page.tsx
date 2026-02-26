@@ -43,11 +43,20 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: selected, onboarding_completed: true }),
       })
-      if (!res.ok) throw new Error('Failed to save')
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        const errorMsg = data?.error || `Server error (${res.status})`
+        console.error('[Onboarding] PATCH failed:', errorMsg)
+        toast.error(`Something went wrong — ${errorMsg}`)
+        return
+      }
+
       await refreshUser()
       toast.success("Welcome to SciFlow!")
       router.replace('/dashboard')
-    } catch {
+    } catch (err) {
+      console.error('[Onboarding] Unexpected error:', err)
       toast.error("Something went wrong — please try again")
     } finally {
       setSaving(false)
@@ -55,67 +64,65 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
-      <div className="w-full max-w-lg space-y-8">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      {/* Header */}
+      <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center text-white text-2xl font-bold mb-6">
+        S
+      </div>
 
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center mx-auto mb-4">
-            <span className="text-lg font-bold text-accent">S</span>
-          </div>
-          <h1 className="text-2xl font-semibold text-foreground">Welcome to SciFlow</h1>
-          <p className="text-muted-foreground">
-            What best describes you? We'll set up your workspace accordingly.
-          </p>
-        </div>
+      <h1 className="text-3xl font-bold mb-2">Welcome to SciFlow</h1>
+      <p className="text-muted-foreground mb-8 text-center">
+        What best describes you? We&apos;ll set up your workspace accordingly.
+      </p>
 
-        {/* Role selection */}
-        <div className="space-y-3">
-          {ROLES.map(role => {
-            const isSelected = selected === role.id
-            const Icon = role.icon
-            return (
-              <button
-                key={role.id}
-                data-selected={isSelected}
-                onClick={() => setSelected(role.id as "funder" | "lab")}
-                className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-150 ${role.color}`}
-              >
+      {/* Role selection */}
+      <div className="w-full max-w-lg space-y-4 mb-8">
+        {ROLES.map(role => {
+          const isSelected = selected === role.id
+          const Icon = role.icon
+          return (
+            <button
+              key={role.id}
+              onClick={() => setSelected(role.id as "funder" | "lab")}
+              data-selected={isSelected}
+              className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-150 ${role.color}`}
+            >
+              <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
-                  <div className={`mt-0.5 shrink-0 ${role.iconColor}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium text-foreground">{role.title}</p>
-                      {isSelected && <CheckCircle className="w-4 h-4 text-foreground shrink-0" />}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">{role.subtitle}</p>
-                    <p className="text-xs text-muted-foreground/60 mt-2">{role.who}</p>
+                  <Icon className={`w-8 h-8 mt-0.5 shrink-0 ${role.iconColor}`} />
+                  <div>
+                    <div className="font-semibold text-lg">{role.title}</div>
+                    <div className="text-sm text-muted-foreground mt-1">{role.subtitle}</div>
+                    <div className="text-xs text-muted-foreground/70 mt-2">{role.who}</div>
                   </div>
                 </div>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Continue */}
-        <Button
-          className="w-full h-12 rounded-xl text-base"
-          disabled={!selected || saving}
-          onClick={handleContinue}
-        >
-          {saving ? (
-            <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Setting up your workspace…</>
-          ) : (
-            'Continue →'
-          )}
-        </Button>
-
-        <p className="text-center text-xs text-muted-foreground">
-          You can change this later in Settings.
-        </p>
+                {isSelected && <CheckCircle className="w-5 h-5 text-green-400 shrink-0 ml-4" />}
+              </div>
+            </button>
+          )
+        })}
       </div>
+
+      {/* Continue */}
+      <Button
+        onClick={handleContinue}
+        disabled={!selected || saving}
+        className="w-full max-w-lg"
+        size="lg"
+      >
+        {saving ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Setting up your workspace…
+          </>
+        ) : (
+          'Continue →'
+        )}
+      </Button>
+
+      <p className="text-xs text-muted-foreground mt-4">
+        You can change this later in Settings.
+      </p>
     </div>
   )
 }
