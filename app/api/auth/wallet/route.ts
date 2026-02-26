@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
           signature: signature as `0x${string}`,
         })
         .catch(() => true) // RPC error → accept (nonce + timestamp is sufficient)
-
       signatureValid = await Promise.race([verify, timeout])
     }
 
@@ -126,7 +125,9 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       // Returning user — update their temp password
       userId = existingUser.id
-      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { password: tempPassword })
+      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: tempPassword,
+      })
       if (updateErr) {
         console.error('[Wallet Auth] Update password error:', updateErr)
         return NextResponse.json({ error: 'Failed to update session' }, { status: 500 })
@@ -142,24 +143,29 @@ export async function POST(request: NextRequest) {
 
       if (signUpError || !newUser?.user) {
         console.error('[Wallet Auth] createUser error:', signUpError)
-        return NextResponse.json({
-          error: `Failed to create account: ${signUpError?.message || 'Unknown error'}`,
-        }, { status: 500 })
+        return NextResponse.json(
+          { error: `Failed to create account: ${signUpError?.message || 'Unknown error'}` },
+          { status: 500 }
+        )
       }
 
       userId = newUser.user.id
 
+      // Insert the user profile row
+      // NOTE: role is intentionally NOT set here — it defaults to 'funder' in the DB.
+      // onboarding_completed is false so the auth-context will redirect to /onboarding.
       try {
         const { error: profileErr } = await supabaseAdmin.from('users').insert({
           id: userId,
           email,
           wallet_address_evm: normalizedAddress,
-          role: 'funder',
+          onboarding_completed: false,
         })
         if (profileErr) console.error('[Wallet Auth] Profile insert error:', profileErr)
       } catch (e) {
         console.error('[Wallet Auth] Profile insert exception:', e)
-        // Don't fail auth — the Supabase auth user was already created
+        // Don't fail auth — the Supabase auth user was already created.
+        // The onboarding PATCH route will upsert the row if it's missing.
       }
     }
 
@@ -175,11 +181,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ email, tempPassword })
-
   } catch (error) {
     console.error('[Wallet Auth] Unexpected error:', error)
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Internal server error',
-    }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
