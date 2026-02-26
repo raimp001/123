@@ -68,25 +68,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load DB profile after wallet auth
   const loadProfile = useCallback(async (userId: string) => {
     if (!supabase) return null
-    const { data: userData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    if (!userData) {
-      setDbUser(null)
-      setLab(null)
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      if (!userData) {
+        setDbUser(null)
+        setLab(null)
+        return null
+      }
+      setDbUser(userData)
+      if (userData.role === 'lab') {
+        const { data: labData } = await supabase
+          .from('labs').select('*').eq('user_id', userId).single()
+        setLab(labData)
+      } else {
+        setLab(null)
+      }
+      return userData
+    } catch {
       return null
     }
-    setDbUser(userData)
-    if (userData.role === 'lab') {
-      const { data: labData } = await supabase
-        .from('labs').select('*').eq('user_id', userId).single()
-      setLab(labData)
-    } else {
-      setLab(null)
-    }
-    return userData
   }, [supabase])
 
   // Redirect new users (or incomplete onboarding) to /onboarding
@@ -110,7 +114,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let mounted = true
 
+    // 5-second timeout to prevent infinite skeleton
+    const bootstrapTimeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('[AuthProvider] getSession timed out — treating as unauthenticated')
+        setIsAuthenticated(false)
+        setDbUser(null)
+        setLab(null)
+        setIsBootstrapping(false)
+      }
+    }, 5000)
+
     supabase.auth.getSession().then(async (result: { data: { session: { user?: { id: string } } | null } }) => {
+      clearTimeout(bootstrapTimeout)
       const session = result.data.session
       if (!mounted) return
       if (session?.user) {
@@ -124,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setIsBootstrapping(false)
     }).catch(() => {
+      clearTimeout(bootstrapTimeout)
       if (!mounted) return
       setIsAuthenticated(false)
       setDbUser(null)
@@ -149,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false
+      clearTimeout(bootstrapTimeout)
       subscription.unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
