@@ -33,6 +33,13 @@ interface AuthContextType {
   refreshUser: () => Promise<void>
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+// Helper: run a promise with a timeout; resolves null on timeout
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ])
+}
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { address, isConnected, connector } = useAccount()
   const { connect, connectors } = useConnect()
@@ -56,30 +63,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
   const supabase = supabaseRef.current
-  // Load DB profile after wallet auth
+  // Load DB profile after wallet auth (with 6s timeout to prevent hanging)
   const loadProfile = useCallback(async (userId: string) => {
     if (!supabase) return null
     try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single()
-      if (!userData) {
+      const userResult = await withTimeout(
+        supabase.from('users').select('*').eq('id', userId).single(),
+        6000
+      )
+      if (!userResult || !userResult.data) {
         setDbUser(null)
         setLab(null)
         return null
       }
+      const userData = userResult.data
       setDbUser(userData)
       if (userData.role === 'lab') {
-        // Use Promise.race with a timeout to prevent hanging on labs query
-        const labQuery = supabase
-          .from('labs').select('*').eq('user_id', userId).single()
-        const timeout = new Promise<{ data: null }>((resolve) =>
-          setTimeout(() => resolve({ data: null }), 5000)
+        const labResult = await withTimeout(
+          supabase.from('labs').select('*').eq('user_id', userId).single(),
+          5000
         )
-        const result = await Promise.race([labQuery, timeout]) as { data: Lab | null }
-        setLab(result.data ?? null)
+        setLab(labResult?.data ?? null)
       } else {
         setLab(null)
       }
@@ -115,15 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
     let mounted = true
-    // Fallback timeout: if neither getSession nor INITIAL_SESSION fires within 8s, unblock UI
+    // Fallback timeout: if INITIAL_SESSION never fires within 8s, unblock UI
     const bootstrapTimeout = setTimeout(() => {
       if (mounted) {
         console.warn('[AuthProvider] bootstrap timed out — treating as unauthenticated')
         finishBootstrap(false)
       }
     }, 8000)
-    // onAuthStateChange fires INITIAL_SESSION synchronously before getSession resolves
-    // This is the most reliable way to detect the session on mount
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: { user?: { id: string } } | null) => {
         clearTimeout(bootstrapTimeout)
@@ -131,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === 'INITIAL_SESSION') {
           if (session?.user) {
             setIsAuthenticated(true)
-            // Finish bootstrap immediately so UI unblocks; load profile in background
+            // Unblock UI immediately; load profile in background
             finishBootstrap(true)
             const profile = await loadProfile(session.user.id)
             if (mounted) redirectNewUser(profile as DbUser | null)
@@ -140,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else if (event === 'SIGNED_IN' && session?.user) {
           setIsAuthenticated(true)
-          // Finish bootstrap immediately so UI unblocks; load profile in background
+          // Unblock UI immediately; load profile in background
           finishBootstrap(true)
           const profile = await loadProfile(session.user.id)
           if (mounted) redirectNewUser(profile as DbUser | null)
