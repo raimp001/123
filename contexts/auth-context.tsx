@@ -1,5 +1,4 @@
 "use client"
-
 import {
   createContext,
   useContext,
@@ -14,9 +13,7 @@ import { base } from 'wagmi/chains'
 import { createClient } from '@/lib/supabase/client'
 import type { User as DbUser, Lab } from '@/types/database'
 import { toast } from 'sonner'
-
 type AuthStep = 'idle' | 'connecting' | 'signing' | 'authenticating'
-
 interface AuthContextType {
   // Wallet / auth state
   isAuthenticated: boolean
@@ -24,28 +21,23 @@ interface AuthContextType {
   walletAddress: string | null
   authStep: AuthStep
   authError: string | null
-
   // DB profile
   dbUser: DbUser | null
   lab: Lab | null
   isFunder: boolean
   isLab: boolean
   isAdmin: boolean
-
   // Actions
   connectWallet: (connectorIndex: number) => void
   disconnectWallet: () => Promise<void>
   refreshUser: () => Promise<void>
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { address, isConnected, connector } = useAccount()
   const { connect, connectors } = useConnect()
   const { disconnect } = useDisconnect()
   const { signMessageAsync } = useSignMessage()
-
   const [authStep, setAuthStep] = useState<AuthStep>('idle')
   const [authError, setAuthError] = useState<string | null>(null)
   const [dbUser, setDbUser] = useState<DbUser | null>(null)
@@ -54,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const authInProgress = useRef(false)
   const bootstrapDone = useRef(false)
-
   // Stable Supabase client — created once, never re-created on re-render
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
   if (supabaseRef.current === null) {
@@ -65,7 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
   const supabase = supabaseRef.current
-
   // Load DB profile after wallet auth
   const loadProfile = useCallback(async (userId: string) => {
     if (!supabase) return null
@@ -82,9 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setDbUser(userData)
       if (userData.role === 'lab') {
-        const { data: labData } = await supabase
+        // Use Promise.race with a timeout to prevent hanging on labs query
+        const labQuery = supabase
           .from('labs').select('*').eq('user_id', userId).single()
-        setLab(labData)
+        const timeout = new Promise<{ data: null }>((resolve) =>
+          setTimeout(() => resolve({ data: null }), 5000)
+        )
+        const result = await Promise.race([labQuery, timeout]) as { data: Lab | null }
+        setLab(result.data ?? null)
       } else {
         setLab(null)
       }
@@ -93,7 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null
     }
   }, [supabase])
-
   const finishBootstrap = useCallback((authenticated: boolean) => {
     if (bootstrapDone.current) return
     bootstrapDone.current = true
@@ -104,7 +98,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsBootstrapping(false)
   }, [])
-
   // Redirect new users (or incomplete onboarding) to /onboarding
   const redirectNewUser = useCallback((profile: DbUser | null) => {
     if (typeof window === 'undefined') return
@@ -115,16 +108,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.location.href = '/onboarding'
     }
   }, [])
-
   // On mount — check for existing Supabase session
   useEffect(() => {
     if (!supabase) {
       finishBootstrap(false)
       return
     }
-
     let mounted = true
-
     // Fallback timeout: if neither getSession nor INITIAL_SESSION fires within 8s, unblock UI
     const bootstrapTimeout = setTimeout(() => {
       if (mounted) {
@@ -132,26 +122,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         finishBootstrap(false)
       }
     }, 8000)
-
     // onAuthStateChange fires INITIAL_SESSION synchronously before getSession resolves
     // This is the most reliable way to detect the session on mount
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: { user?: { id: string } } | null) => {
         clearTimeout(bootstrapTimeout)
         if (!mounted) return
-
         if (event === 'INITIAL_SESSION') {
           if (session?.user) {
             setIsAuthenticated(true)
+            // Finish bootstrap immediately so UI unblocks; load profile in background
+            finishBootstrap(true)
             const profile = await loadProfile(session.user.id)
-            redirectNewUser(profile as DbUser | null)
+            if (mounted) redirectNewUser(profile as DbUser | null)
+          } else {
+            finishBootstrap(false)
           }
-          finishBootstrap(!!session?.user)
         } else if (event === 'SIGNED_IN' && session?.user) {
           setIsAuthenticated(true)
-          const profile = await loadProfile(session.user.id)
-          redirectNewUser(profile as DbUser | null)
+          // Finish bootstrap immediately so UI unblocks; load profile in background
           finishBootstrap(true)
+          const profile = await loadProfile(session.user.id)
+          if (mounted) redirectNewUser(profile as DbUser | null)
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false)
           setDbUser(null)
@@ -160,7 +152,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     )
-
     return () => {
       mounted = false
       clearTimeout(bootstrapTimeout)
@@ -168,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
   // When wallet connects while we're in the "connecting" step, run auth
   useEffect(() => {
     if (isConnected && address && authStep === 'connecting' && !authInProgress.current) {
@@ -179,19 +169,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, address, authStep])
-
   const authenticateWallet = async (walletAddress: string) => {
     try {
       setAuthStep('signing')
       setAuthError(null)
-
       const res = await fetch(`/api/auth/wallet?address=${walletAddress}`)
       if (!res.ok) throw new Error('Failed to get sign-in challenge')
       const { message } = await res.json()
-
       const signature = await signMessageAsync({ message })
       setAuthStep('authenticating')
-
       const authRes = await fetch('/api/auth/wallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -201,9 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!authRes.ok) {
         throw new Error(authData.error || `Server error (${authRes.status})`)
       }
-
       const { email, tempPassword } = authData
-
       if (supabase) {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -211,7 +195,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         if (signInError) throw signInError
       }
-
       setAuthStep('idle')
       toast.success('Signed in')
     } catch (err) {
@@ -224,7 +207,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthStep('idle')
     }
   }
-
   const connectWallet = useCallback((connectorIndex: number) => {
     setAuthError(null)
     setAuthStep('connecting')
@@ -237,7 +219,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     })
   }, [connect, connectors])
-
   const disconnectWallet = useCallback(async () => {
     disconnect()
     if (supabase) await supabase.auth.signOut()
@@ -248,22 +229,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthError(null)
     toast.success('Signed out')
   }, [disconnect, supabase])
-
   const refreshUser = useCallback(async () => {
     if (!supabase) return
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) await loadProfile(session.user.id)
   }, [supabase, loadProfile])
-
   const stepLabel = {
     connecting: 'Opening wallet…',
     signing: 'Approve sign-in in wallet…',
     authenticating: 'Signing you in…',
     idle: null,
   }[authStep]
-
   const isLoading = authStep !== 'idle' || isBootstrapping
-
   return (
     <AuthContext.Provider
       value={{
@@ -292,7 +269,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   )
 }
-
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
