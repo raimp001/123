@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isBootstrapping, setIsBootstrapping] = useState(true)
   const authInProgress = useRef(false)
+  const bootstrapDone = useRef(false)
 
   // Stable Supabase client — created once, never re-created on re-render
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null)
@@ -93,6 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase])
 
+  const finishBootstrap = useCallback((authenticated: boolean) => {
+    if (bootstrapDone.current) return
+    bootstrapDone.current = true
+    if (!authenticated) {
+      setIsAuthenticated(false)
+      setDbUser(null)
+      setLab(null)
+    }
+    setIsBootstrapping(false)
+  }, [])
+
   // Redirect new users (or incomplete onboarding) to /onboarding
   const redirectNewUser = useCallback((profile: DbUser | null) => {
     if (typeof window === 'undefined') return
@@ -107,59 +119,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // On mount — check for existing Supabase session
   useEffect(() => {
     if (!supabase) {
-      // No Supabase configured — stop bootstrapping immediately
-      setIsBootstrapping(false)
+      finishBootstrap(false)
       return
     }
 
     let mounted = true
 
-    // 5-second timeout to prevent infinite skeleton
+    // Fallback timeout: if neither getSession nor INITIAL_SESSION fires within 8s, unblock UI
     const bootstrapTimeout = setTimeout(() => {
       if (mounted) {
-        console.warn('[AuthProvider] getSession timed out — treating as unauthenticated')
-        setIsAuthenticated(false)
-        setDbUser(null)
-        setLab(null)
-        setIsBootstrapping(false)
+        console.warn('[AuthProvider] bootstrap timed out — treating as unauthenticated')
+        finishBootstrap(false)
       }
-    }, 5000)
+    }, 8000)
 
-    supabase.auth.getSession().then(async (result: { data: { session: { user?: { id: string } } | null } }) => {
-      clearTimeout(bootstrapTimeout)
-      const session = result.data.session
-      if (!mounted) return
-      if (session?.user) {
-        setIsAuthenticated(true)
-        const profile = await loadProfile(session.user.id)
-        redirectNewUser(profile as DbUser | null)
-      } else {
-        setIsAuthenticated(false)
-        setDbUser(null)
-        setLab(null)
-      }
-      setIsBootstrapping(false)
-    }).catch(() => {
-      clearTimeout(bootstrapTimeout)
-      if (!mounted) return
-      setIsAuthenticated(false)
-      setDbUser(null)
-      setLab(null)
-      setIsBootstrapping(false)
-    })
-
+    // onAuthStateChange fires INITIAL_SESSION synchronously before getSession resolves
+    // This is the most reliable way to detect the session on mount
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: { user?: { id: string } } | null) => {
-        if (event === 'SIGNED_IN' && session?.user) {
+        clearTimeout(bootstrapTimeout)
+        if (!mounted) return
+
+        if (event === 'INITIAL_SESSION') {
+          if (session?.user) {
+            setIsAuthenticated(true)
+            const profile = await loadProfile(session.user.id)
+            redirectNewUser(profile as DbUser | null)
+          }
+          finishBootstrap(!!session?.user)
+        } else if (event === 'SIGNED_IN' && session?.user) {
           setIsAuthenticated(true)
           const profile = await loadProfile(session.user.id)
           redirectNewUser(profile as DbUser | null)
-          setIsBootstrapping(false)
+          finishBootstrap(true)
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false)
           setDbUser(null)
           setLab(null)
-          setIsBootstrapping(false)
+          finishBootstrap(false)
         }
       }
     )
