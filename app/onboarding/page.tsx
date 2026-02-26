@@ -1,6 +1,5 @@
 "use client"
 import { useState } from "react"
-import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Loader2, Building2, FlaskConical, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
@@ -11,7 +10,7 @@ const ROLES = [
     icon: Building2,
     title: "I want to fund research",
     subtitle: "Post research questions and pay labs only when they deliver results",
-    who: "Pharma companies \u00b7 Governments \u00b7 Universities \u00b7 Foundations \u00b7 VCs \u00b7 Individuals",
+    who: "Pharma companies · Governments · Universities · Foundations · VCs · Individuals",
     color: "border-blue-500/30 hover:border-blue-400/60 data-[selected=true]:border-blue-400 data-[selected=true]:bg-blue-500/10",
     iconColor: "text-blue-400",
   },
@@ -20,14 +19,13 @@ const ROLES = [
     icon: FlaskConical,
     title: "I am a researcher / lab",
     subtitle: "Find funded research projects and get paid milestone by milestone",
-    who: "Research labs \u00b7 Academic institutions \u00b7 Independent scientists \u00b7 CROs",
+    who: "Research labs · Academic institutions · Independent scientists · CROs",
     color: "border-emerald-500/30 hover:border-emerald-400/60 data-[selected=true]:border-emerald-400 data-[selected=true]:bg-emerald-500/10",
     iconColor: "text-emerald-400",
   },
 ]
 
 export default function OnboardingPage() {
-  const { refreshUser } = useAuth()
   const [selected, setSelected] = useState<"funder" | "lab" | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -44,17 +42,16 @@ export default function OnboardingPage() {
         const data = await res.json().catch(() => ({}))
         const errorMsg = data?.error || `Server error (${res.status})`
         console.error('[Onboarding] PATCH failed:', errorMsg)
-        toast.error(`Something went wrong \u2014 ${errorMsg}`)
+        toast.error(`Something went wrong — ${errorMsg}`)
         setSaving(false)
         return
       }
-      await refreshUser()
       toast.success("Welcome to SciFlow!")
-      // Use hard redirect to ensure full app re-init with updated profile
+      // Navigate immediately - dashboard will load fresh profile
       window.location.href = '/dashboard'
     } catch (err) {
       console.error('[Onboarding] Unexpected error:', err)
-      toast.error("Something went wrong \u2014 please try again")
+      toast.error("Something went wrong — please try again")
       setSaving(false)
     }
   }
@@ -106,10 +103,10 @@ export default function OnboardingPage() {
         {saving ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Setting up your workspace\u2026
+            Setting up your workspace…
           </>
         ) : (
-          'Continue \u2192'
+          'Continue →'
         )}
       </Button>
       <p className="text-xs text-muted-foreground mt-4">
