@@ -1,7 +1,5 @@
 "use client"
-
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Loader2, Building2, FlaskConical, CheckCircle } from "lucide-react"
@@ -13,7 +11,7 @@ const ROLES = [
     icon: Building2,
     title: "I want to fund research",
     subtitle: "Post research questions and pay labs only when they deliver results",
-    who: "Pharma companies · Governments · Universities · Foundations · VCs · Individuals",
+    who: "Pharma companies \u00b7 Governments \u00b7 Universities \u00b7 Foundations \u00b7 VCs \u00b7 Individuals",
     color: "border-blue-500/30 hover:border-blue-400/60 data-[selected=true]:border-blue-400 data-[selected=true]:bg-blue-500/10",
     iconColor: "text-blue-400",
   },
@@ -22,14 +20,13 @@ const ROLES = [
     icon: FlaskConical,
     title: "I am a researcher / lab",
     subtitle: "Find funded research projects and get paid milestone by milestone",
-    who: "Research labs · Academic institutions · Independent scientists · CROs",
+    who: "Research labs \u00b7 Academic institutions \u00b7 Independent scientists \u00b7 CROs",
     color: "border-emerald-500/30 hover:border-emerald-400/60 data-[selected=true]:border-emerald-400 data-[selected=true]:bg-emerald-500/10",
     iconColor: "text-emerald-400",
   },
 ]
 
 export default function OnboardingPage() {
-  const router = useRouter()
   const { refreshUser } = useAuth()
   const [selected, setSelected] = useState<"funder" | "lab" | null>(null)
   const [saving, setSaving] = useState(false)
@@ -43,22 +40,21 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: selected, onboarding_completed: true }),
       })
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         const errorMsg = data?.error || `Server error (${res.status})`
         console.error('[Onboarding] PATCH failed:', errorMsg)
-        toast.error(`Something went wrong — ${errorMsg}`)
+        toast.error(`Something went wrong \u2014 ${errorMsg}`)
+        setSaving(false)
         return
       }
-
       await refreshUser()
       toast.success("Welcome to SciFlow!")
-      router.replace('/dashboard')
+      // Use hard redirect to ensure full app re-init with updated profile
+      window.location.href = '/dashboard'
     } catch (err) {
       console.error('[Onboarding] Unexpected error:', err)
-      toast.error("Something went wrong — please try again")
-    } finally {
+      toast.error("Something went wrong \u2014 please try again")
       setSaving(false)
     }
   }
@@ -69,12 +65,10 @@ export default function OnboardingPage() {
       <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center text-white text-2xl font-bold mb-6">
         S
       </div>
-
       <h1 className="text-3xl font-bold mb-2">Welcome to SciFlow</h1>
       <p className="text-muted-foreground mb-8 text-center">
         What best describes you? We&apos;ll set up your workspace accordingly.
       </p>
-
       {/* Role selection */}
       <div className="w-full max-w-lg space-y-4 mb-8">
         {ROLES.map(role => {
@@ -102,7 +96,6 @@ export default function OnboardingPage() {
           )
         })}
       </div>
-
       {/* Continue */}
       <Button
         onClick={handleContinue}
@@ -113,13 +106,12 @@ export default function OnboardingPage() {
         {saving ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Setting up your workspace…
+            Setting up your workspace\u2026
           </>
         ) : (
-          'Continue →'
+          'Continue \u2192'
         )}
       </Button>
-
       <p className="text-xs text-muted-foreground mt-4">
         You can change this later in Settings.
       </p>
