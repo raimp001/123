@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 // GET /api/users — get current user profile
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error || !session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = session.user
 
   const { data: profile } = await supabase
     .from('users')
@@ -19,8 +20,9 @@ export async function GET() {
 // PATCH /api/users — update (or create) current user profile
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error || !session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = session.user
 
   const body = await req.json()
   const { full_name, avatar_url, role, lab, onboarding_completed } = body
@@ -78,7 +80,6 @@ export async function PATCH(req: NextRequest) {
     if (lab.specializations) labUpdates.specializations = lab.specializations
     if (lab.institution_affiliation !== undefined) labUpdates.institution_affiliation = lab.institution_affiliation
     if (lab.team_size !== undefined) labUpdates.team_size = lab.team_size
-
     if (existingLab) {
       await supabase.from('labs').update(labUpdates).eq('user_id', user.id)
     } else if (updates.role === 'lab' || lab.name) {
